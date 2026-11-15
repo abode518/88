@@ -15,6 +15,7 @@
 #include <chrono>
 #include <atomic>
 #include <string>
+#include <algorithm>
 
 #include "memory.h"
 #include "driver.h"
@@ -277,34 +278,35 @@ static void drawMenu() {
         // ════════════════ ESP ════════════════════════════════════════════════
         if (ImGui::BeginTabItem("  ESP  ")) {
             SectionHeader("PLAYERS");
-            ImGui::Columns(2, nullptr, false);
-            ImGui::Checkbox("Boxes",     &g_cfg.esp.playerBoxes);
-            ImGui::Checkbox("Skeleton",  &g_cfg.esp.playerSkeleton);
+            // helper: keybind hint aligned right
+            auto Key = [](const char* k) {
+                ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize(k).x - 14);
+                ImGui::TextColored({0.35f,0.35f,0.35f,1.f}, "%s", k);
+            };
+            ImGui::Checkbox("Boxes",     &g_cfg.esp.playerBoxes);    Key("[F2]");
+            ImGui::Checkbox("Skeleton",  &g_cfg.esp.playerSkeleton); Key("[F3]");
             ImGui::Checkbox("Health",    &g_cfg.esp.playerHealth);
-            ImGui::NextColumn();
             ImGui::Checkbox("Names",     &g_cfg.esp.playerName);
             ImGui::Checkbox("Distance",  &g_cfg.esp.playerDist);
-            ImGui::Checkbox("Skip team", &g_cfg.esp.teamCheck);
-            ImGui::Columns(1);
+            ImGui::Checkbox("Skip teammates", &g_cfg.esp.teamCheck);
             ImGui::Spacing();
-            ImGui::SliderFloat("Max distance", &g_cfg.esp.maxDist, 50.f, 600.f, "%.0f m");
+            ImGui::PushItemWidth(-1);
+            ImGui::SliderFloat("##dist", &g_cfg.esp.maxDist, 50.f, 600.f, "Max dist  %.0f m");
+            ImGui::PopItemWidth();
 
             SectionHeader("WORLD");
-            ImGui::Columns(2, nullptr, false);
-            ImGui::Checkbox("Loot ESP",  &g_cfg.esp.lootESP);
-            ImGui::NextColumn();
-            ImGui::Checkbox("Radar",     &g_cfg.esp.radarESP);
-            ImGui::Columns(1);
-            if (g_cfg.esp.radarESP)
-                ImGui::SliderFloat("Radar scale", &g_cfg.esp.radarScale, 0.1f, 2.f, "%.1f");
+            ImGui::Checkbox("Loot ESP",  &g_cfg.esp.lootESP);  Key("[F5]");
+            ImGui::Checkbox("Radar",     &g_cfg.esp.radarESP); Key("[F4]");
+            if (g_cfg.esp.radarESP) {
+                ImGui::PushItemWidth(-1);
+                ImGui::SliderFloat("##rscl", &g_cfg.esp.radarScale, 0.1f, 2.f, "Radar scale  %.1f");
+                ImGui::PopItemWidth();
+            }
 
-            SectionHeader("OVERVIEW");
-            // mini status row
-            Badge("Boxes",    g_cfg.esp.playerBoxes);
-            ImGui::SameLine(120);
+            SectionHeader("STATUS");
+            Badge("Boxes",    g_cfg.esp.playerBoxes);  ImGui::SameLine(130);
             Badge("Skeleton", g_cfg.esp.playerSkeleton);
-            Badge("Loot",     g_cfg.esp.lootESP);
-            ImGui::SameLine(120);
+            Badge("Loot",     g_cfg.esp.lootESP);      ImGui::SameLine(130);
             Badge("Radar",    g_cfg.esp.radarESP);
 
             ImGui::EndTabItem();
@@ -314,27 +316,34 @@ static void drawMenu() {
         if (ImGui::BeginTabItem("  AIM  ")) {
             SectionHeader("AIMBOT");
             ImGui::Checkbox("Enable  (hold RMB)", &g_cfg.aim.enabled);
+            {
+                ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize("[F1]").x - 14);
+                ImGui::TextColored({0.35f,0.35f,0.35f,1.f}, "[F1]");
+            }
             ImGui::Spacing();
             ImGui::BeginDisabled(!g_cfg.aim.enabled);
-            ImGui::SliderFloat("FOV radius", &g_cfg.aim.fovPx,  20.f, 500.f, "%.0f px");
-            ImGui::SliderFloat("Smoothness", &g_cfg.aim.smooth,  1.f,  20.f, "%.1f");
-            const char* bones[] = {"Hips (0)","Chest (8)","Head (10)"};
+            ImGui::PushItemWidth(-1);
+            ImGui::SliderFloat("##fov",  &g_cfg.aim.fovPx,  20.f, 500.f, "FOV radius  %.0f px");
+            ImGui::SliderFloat("##smth", &g_cfg.aim.smooth,  1.f,  20.f, "Smooth  %.1f   [NUM+/-]");
+            ImGui::PopItemWidth();
+            const char* bones[] = {"Hips","Chest","Head"};
             int boneIdx = (g_cfg.aim.targetBone == Offsets::BoneHead)  ? 2 :
                           (g_cfg.aim.targetBone == Offsets::BoneChest) ? 1 : 0;
+            ImGui::PushItemWidth(120);
             if (ImGui::Combo("Target bone", &boneIdx, bones, 3))
                 g_cfg.aim.targetBone = (boneIdx==2) ? Offsets::BoneHead  :
                                        (boneIdx==1) ? Offsets::BoneChest : Offsets::BoneHips;
+            ImGui::PopItemWidth();
             ImGui::EndDisabled();
 
             SectionHeader("WEAPON");
             ImGui::Checkbox("No recoil / no spread", &g_cfg.aim.recoilComp);
             ImGui::Checkbox("Visibility check",      &g_cfg.aim.visCheck);
 
-            SectionHeader("OVERVIEW");
-            Badge("Aimbot",        g_cfg.aim.enabled);
-            ImGui::SameLine(120);
-            Badge("No recoil",     g_cfg.aim.recoilComp);
-            Badge("Vis check",     g_cfg.aim.visCheck);
+            SectionHeader("STATUS");
+            Badge("Aimbot",    g_cfg.aim.enabled);    ImGui::SameLine(130);
+            Badge("No recoil", g_cfg.aim.recoilComp);
+            Badge("Vis check", g_cfg.aim.visCheck);
 
             ImGui::EndTabItem();
         }
@@ -344,46 +353,58 @@ static void drawMenu() {
             SectionHeader("ECONOMY");
             ImGui::Checkbox("Unlimited money", &g_cfg.feat.unlimMoney);
             if (g_cfg.feat.unlimMoney) {
-                ImGui::PushItemWidth(160);
-                ImGui::SliderInt("Amount", &g_cfg.feat.moneyAmount, 10000, 9999999, "$%d");
+                ImGui::PushItemWidth(-1);
+                ImGui::SliderInt("##money", &g_cfg.feat.moneyAmount, 10000, 9999999, "Amount  $%d");
                 ImGui::PopItemWidth();
             }
 
             SectionHeader("MOVEMENT");
             ImGui::Checkbox("Speed hack", &g_cfg.feat.speedHack);
+            {
+                ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize("[F6]").x - 14);
+                ImGui::TextColored({0.35f,0.35f,0.35f,1.f}, "[F6]");
+            }
             if (g_cfg.feat.speedHack) {
-                ImGui::PushItemWidth(160);
-                ImGui::SliderFloat("Multiplier", &g_cfg.feat.speedMult, 1.f, 5.f, "x%.1f");
+                ImGui::PushItemWidth(-1);
+                ImGui::SliderFloat("##spd", &g_cfg.feat.speedMult, 1.f, 5.f, "Mult  x%.1f");
                 ImGui::PopItemWidth();
             }
             ImGui::Checkbox("Noclip", &g_cfg.feat.noclip);
 
             SectionHeader("COMBAT");
-            ImGui::Columns(2, nullptr, false);
-            ImGui::Checkbox("Rapid fire",    &g_cfg.feat.rapidFire);
-            ImGui::Checkbox("Unlim ammo",    &g_cfg.feat.unlimAmmo);
-            ImGui::NextColumn();
-            ImGui::Checkbox("Unlim durabil", &g_cfg.feat.unlimDura);
-            ImGui::Columns(1);
+            ImGui::Checkbox("Rapid fire",        &g_cfg.feat.rapidFire);
+            ImGui::Checkbox("Unlimited ammo",    &g_cfg.feat.unlimAmmo);
+            ImGui::Checkbox("Unlimited durabil", &g_cfg.feat.unlimDura);
 
-            SectionHeader("OVERVIEW");
-            Badge("Money",   g_cfg.feat.unlimMoney);
-            ImGui::SameLine(120);
+            SectionHeader("STATUS");
+            Badge("Money",   g_cfg.feat.unlimMoney); ImGui::SameLine(130);
             Badge("Speed",   g_cfg.feat.speedHack);
-            Badge("Noclip",  g_cfg.feat.noclip);
-            ImGui::SameLine(120);
-            Badge("Rap.Fire",g_cfg.feat.rapidFire);
+            Badge("Noclip",  g_cfg.feat.noclip);     ImGui::SameLine(130);
+            Badge("R.Fire",  g_cfg.feat.rapidFire);
 
             ImGui::EndTabItem();
         }
 
         // ════════════════ SETTINGS ═══════════════════════════════════════════
         if (ImGui::BeginTabItem("  SET  ")) {
+            SectionHeader("HOTKEYS");
+            ImGui::TextColored({0.5f,0.5f,0.5f,1.f},
+                " INSERT    open / close menu\n"
+                " F1        aimbot on/off\n"
+                " F2        boxes on/off\n"
+                " F3        skeleton on/off\n"
+                " F4        radar on/off\n"
+                " F5        loot ESP on/off\n"
+                " F6        speed hack on/off\n"
+                " NUM +/-   aimbot smooth +/-1\n"
+                " DELETE    PANIC — all off\n"
+                " END       exit");
+
             SectionHeader("PROTECTION");
             if (ImGui::Checkbox("Stream proof  (OBS / Game Bar / ShadowPlay)", &g_streamProof))
                 g_overlay.applyStreamProof(g_streamProof);
             ImGui::TextColored({0.4f,0.4f,0.4f,1.f},
-                "   overlay invisible to any screen capture");
+                "   invisible to any screen capture");
 
             SectionHeader("CONFIG");
             ImGui::PushStyleColor(ImGuiCol_Button,        {0.0f,0.3f,0.45f,0.7f});
@@ -399,12 +420,9 @@ static void drawMenu() {
             ImGui::Spacing();
             ImGui::TextColored({0.3f,0.3f,0.3f,1.f},
                 "%%APPDATA%%\\Microsoft\\config.bin");
-
-            SectionHeader("OVERVIEW");
-            Badge("Stream proof", g_streamProof);
-            ImGui::SameLine(140);
+            ImGui::Spacing();
             ImGui::TextColored({0.3f,0.3f,0.3f,1.f},
-                "offsets: %s", g_offsetsOk ? "resolved" : "MISSING");
+                "offsets: %s", g_offsetsOk ? "resolved" : "MISSING — patterns need update");
 
             ImGui::EndTabItem();
         }
@@ -418,10 +436,53 @@ static void drawMenu() {
 }
 
 // ── hotkeys ───────────────────────────────────────────────────────────────────
+// INSERT  = menu open/close
+// END     = exit
+// DELETE  = panic — zero every feature instantly
+// F1      = toggle aimbot
+// F2      = toggle player boxes
+// F3      = toggle skeleton
+// F4      = toggle radar
+// F5      = toggle loot ESP
+// F6      = toggle speed hack
+// NUMPAD+ = aimbot smooth +1 (less snappy)
+// NUMPAD- = aimbot smooth -1 (more snappy)
 static void hotkeyThread() {
     while (g_running) {
         if (GetAsyncKeyState(VK_INSERT) & 1) g_menuOpen = !g_menuOpen;
         if (GetAsyncKeyState(VK_END)    & 1) g_running  = false;
+
+        // panic — wipe every feature in one keypress
+        if (GetAsyncKeyState(VK_DELETE) & 1) {
+            g_cfg.aim.enabled         = false;
+            g_cfg.esp.playerBoxes     = false;
+            g_cfg.esp.playerSkeleton  = false;
+            g_cfg.esp.playerHealth    = false;
+            g_cfg.esp.playerName      = false;
+            g_cfg.esp.playerDist      = false;
+            g_cfg.esp.lootESP         = false;
+            g_cfg.esp.radarESP        = false;
+            g_cfg.feat.speedHack      = false;
+            g_cfg.feat.noclip         = false;
+            g_cfg.feat.rapidFire      = false;
+            g_cfg.feat.unlimAmmo      = false;
+            g_cfg.feat.unlimDura      = false;
+            g_cfg.feat.unlimMoney     = false;
+        }
+
+        if (GetAsyncKeyState(VK_F1) & 1) g_cfg.aim.enabled        = !g_cfg.aim.enabled;
+        if (GetAsyncKeyState(VK_F2) & 1) g_cfg.esp.playerBoxes    = !g_cfg.esp.playerBoxes;
+        if (GetAsyncKeyState(VK_F3) & 1) g_cfg.esp.playerSkeleton = !g_cfg.esp.playerSkeleton;
+        if (GetAsyncKeyState(VK_F4) & 1) g_cfg.esp.radarESP       = !g_cfg.esp.radarESP;
+        if (GetAsyncKeyState(VK_F5) & 1) g_cfg.esp.lootESP        = !g_cfg.esp.lootESP;
+        if (GetAsyncKeyState(VK_F6) & 1) g_cfg.feat.speedHack     = !g_cfg.feat.speedHack;
+
+        // NUMPAD +/- adjust aimbot smoothness (clamp 1..20)
+        if (GetAsyncKeyState(VK_ADD)      & 1)
+            g_cfg.aim.smooth = std::min(20.f, g_cfg.aim.smooth + 1.f);
+        if (GetAsyncKeyState(VK_SUBTRACT) & 1)
+            g_cfg.aim.smooth = std::max(1.f,  g_cfg.aim.smooth - 1.f);
+
         rsleep(10);
     }
 }
