@@ -1,0 +1,12 @@
+{
+  "name": "comfyui-video-adapter",
+  "version": "1.0.0",
+  "description": "يحوّل ComfyUI API إلى الشكل العام (POST /generate -> job_id, GET /status/:id) اللي يتوقعه server/engines/video.js",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "express": "^4.21.1",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^2.7.0"
+  }
+}
