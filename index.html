@@ -1,75 +1,398 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Hacked By L7N</title>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      font-family: monospace;
-      color: #fff;
-      text-align: center;
-    }
-    /* خلفية الفيديو */
-    #bg-video {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: -1;
-    }
-    .content {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-    .code-box {
-      background: rgba(0,0,0,0.7);
-      padding: 15px;
-      border-radius: 8px;
-      display: inline-block;
-      text-align: left;
-    }
-    .code {
-      color: #0f0;
-      font-size: 14px;
-      white-space: pre-line;
-    }
-    h1 {
-      margin-top: 20px;
-      font-size: 28px;
-      color: #ff0;
-      text-shadow: 0 0 10px #ff0;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rob Run</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a12; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: monospace; }
+  canvas { display: block; border: 2px solid #0ff3; border-radius: 4px; image-rendering: pixelated; }
+  #ui { color: #888; font-size: 12px; margin-top: 8px; letter-spacing: 1px; }
+</style>
 </head>
 <body>
-  <!-- الفيديو كخلفية -->
-  <video autoplay muted loop playsinline id="bg-video">
-    <source src="https://cdn.discordapp.com/attachments/1263817033309622283/1401435231260639292/h_1.mp4?ex=689043c4&is=688ef244&hm=9ae064993a01ecc526f4200f28ef5e4ddeac08e6cfcf14995aac102042eb5eae&" type="video/mp4">
-    متصفحك لا يدعم عرض الفيديو.
-  </video>
+<canvas id="c"></canvas>
+<div id="ui">SPACE / TAP — jump &nbsp;|&nbsp; double jump allowed</div>
 
-  <div class="content">
-    <div class="code-box">
-      <div class="code">
-{
-"ip": "2a02:cb80:424c:a49:64d0:7c84:d368:9be9",
-"city": "Jeddah",
-"region": "Mecca Region",
-"country": "SA",
-"org": "Mobile Telecommunication Company Saudi Arabia Joint-Stock company",
-"timezone": "Asia/Riyadh"
-}
-      </div>
-    </div>
-    <h1>Hacked By L7N</h1>
-  </div>
+<script>
+// Rob Run — single-file endless runner
+// global vars exposed for cheat.js compatibility
+var score  = 0;
+var lives  = 3;
+var hiScore = 0;
+
+(function() {
+  const C = document.getElementById('c');
+  const ctx = C.getContext('2d');
+
+  // ── canvas size ──────────────────────────────────────────────────────────────
+  const W = 640, H = 200;
+  C.width = W; C.height = H;
+  C.style.width  = Math.min(window.innerWidth  - 16, 800) + 'px';
+  C.style.height = (Math.min(window.innerWidth  - 16, 800) / W * H) + 'px';
+
+  // ── palette ──────────────────────────────────────────────────────────────────
+  const P = {
+    bg:      '#0a0a12',
+    ground:  '#1a1a2e',
+    gline:   '#0ff4',
+    rob:     '#00cfff',
+    robShad: '#0066aa',
+    obs1:    '#ff4466',
+    obs2:    '#ff9900',
+    obs3:    '#aa44ff',
+    star:    '#ffffff22',
+    hud:     '#00cfff',
+    danger:  '#ff4466',
+    life:    '#ff4466',
+    lifeBg:  '#330011',
+    text:    '#ffffff',
+    sub:     '#888',
+  };
+
+  // ── constants ────────────────────────────────────────────────────────────────
+  const GROUND = H - 36;
+  const GRAVITY = 0.55;
+  const JUMP_V  = -11;
+
+  // ── stars (bg decoration) ────────────────────────────────────────────────────
+  const stars = Array.from({length: 60}, () => ({
+    x: Math.random() * W,
+    y: Math.random() * (GROUND - 20),
+    r: Math.random() * 1.2 + 0.3,
+    spd: Math.random() * 0.3 + 0.1,
+  }));
+
+  // ── Rob (player) ─────────────────────────────────────────────────────────────
+  const rob = {
+    x: 90, y: GROUND, w: 20, h: 28,
+    vy: 0, jumps: 0, maxJumps: 2,
+    invTimer: 0,   // iframes after hit
+    frame: 0, frameTimer: 0,
+  };
+
+  function robOnGround() { return rob.y >= GROUND; }
+
+  function jump() {
+    if (rob.jumps < rob.maxJumps) {
+      rob.vy = JUMP_V - (rob.jumps === 1 ? 1 : 0);
+      rob.jumps++;
+    }
+  }
+
+  // ── obstacles ────────────────────────────────────────────────────────────────
+  let obs = [];
+  let obsTimer = 0;
+  let obsInterval = 90; // frames between spawns
+
+  const OBS_TYPES = [
+    { w: 16, h: 28, color: P.obs1, label: 'spike' },
+    { w: 24, h: 20, color: P.obs2, label: 'crate' },
+    { w: 14, h: 44, color: P.obs3, label: 'pole'  },
+    { w: 32, h: 16, color: P.obs1, label: 'wall'  },
+  ];
+
+  function spawnObs() {
+    const t = OBS_TYPES[Math.floor(Math.random() * OBS_TYPES.length)];
+    obs.push({
+      x: W + 10,
+      y: GROUND + rob.h - t.h,  // sits on ground
+      w: t.w, h: t.h,
+      color: t.color,
+      label: t.label,
+      spd: gameSpeed,
+    });
+  }
+
+  // ── particles ────────────────────────────────────────────────────────────────
+  let particles = [];
+
+  function burst(x, y, color, n = 8) {
+    for (let i = 0; i < n; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = Math.random() * 3 + 1;
+      particles.push({
+        x, y, vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd - 2,
+        life: 1, color,
+      });
+    }
+  }
+
+  // ── game state ───────────────────────────────────────────────────────────────
+  let state     = 'title'; // title | play | dead | gameover
+  let frame     = 0;
+  let gameSpeed = 4.5;
+  let deadTimer = 0;
+
+  function resetRound() {
+    rob.y = GROUND; rob.vy = 0; rob.jumps = 0; rob.invTimer = 0;
+    obs = []; particles = [];
+    obsTimer = 0; obsInterval = 90;
+    gameSpeed = 4.5;
+    score = 0;
+    frame = 0;
+  }
+
+  function newGame() {
+    lives = 3;
+    resetRound();
+    state = 'play';
+  }
+
+  // ── input ────────────────────────────────────────────────────────────────────
+  function onAction() {
+    if (state === 'title' || state === 'gameover') { newGame(); return; }
+    if (state === 'dead') return;
+    jump();
+  }
+
+  document.addEventListener('keydown', e => { if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); onAction(); } });
+  C.addEventListener('pointerdown', onAction);
+
+  // ── draw helpers ─────────────────────────────────────────────────────────────
+  function rect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+
+  function drawRob() {
+    if (rob.invTimer > 0 && Math.floor(rob.invTimer / 4) % 2 === 0) return; // blink
+
+    const x = rob.x, y = rob.y, w = rob.w, h = rob.h;
+
+    // body
+    rect(x + 3, y + 10, w - 6, h - 10, P.rob);
+    // head
+    rect(x + 4, y, w - 8, 12, P.rob);
+    // eye
+    rect(x + 10, y + 3, 4, 3, P.bg);
+    // legs (animated)
+    const legOff = robOnGround() ? Math.floor(frame / 6) % 2 : 0;
+    rect(x + 3,  y + h - 6, 6, 6 + legOff, P.robShad);
+    rect(x + 11, y + h - 6, 6, 6 - legOff, P.robShad);
+    // arm
+    rect(x,      y + 14, 4, 8, P.robShad);
+    rect(x + w - 4, y + 14, 4, 8, P.robShad);
+  }
+
+  function drawObs(o) {
+    rect(o.x, o.y, o.w, o.h, o.color);
+    // small highlight
+    ctx.fillStyle = '#ffffff22';
+    ctx.fillRect(o.x + 2, o.y + 2, o.w - 4, 3);
+  }
+
+  function drawGround() {
+    // ground fill
+    rect(0, GROUND + rob.h, W, H - (GROUND + rob.h), P.ground);
+    // ground line
+    ctx.fillStyle = P.gline;
+    ctx.fillRect(0, GROUND + rob.h, W, 2);
+    // moving dashes
+    ctx.fillStyle = '#0ff2';
+    const dashW = 24, gap = 48;
+    const offset = (frame * gameSpeed) % (dashW + gap);
+    for (let x = -dashW + offset; x < W; x += dashW + gap) {
+      ctx.fillRect(x % W, GROUND + rob.h + 1, dashW, 1);
+    }
+  }
+
+  function drawHUD() {
+    // score
+    ctx.fillStyle = P.hud;
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(`SCORE  ${score}`, 12, 20);
+
+    // hi score
+    ctx.fillStyle = P.sub;
+    ctx.font = '11px monospace';
+    ctx.fillText(`BEST ${hiScore}`, 12, 34);
+
+    // lives
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = i < lives ? P.life : P.lifeBg;
+      ctx.font = '14px monospace';
+      ctx.fillText('♥', W - 20 - i * 20, 20);
+    }
+
+    // speed
+    ctx.fillStyle = P.sub;
+    ctx.font = '10px monospace';
+    ctx.fillText(`SPD ${gameSpeed.toFixed(1)}`, W - 55, 34);
+  }
+
+  function drawTitle() {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = P.hud;
+    ctx.font = 'bold 32px monospace';
+    ctx.fillText('ROB RUN', W/2, H/2 - 20);
+    ctx.fillStyle = P.sub;
+    ctx.font = '13px monospace';
+    ctx.fillText('SPACE / TAP  to start', W/2, H/2 + 8);
+    ctx.textAlign = 'left';
+  }
+
+  function drawDead() {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = P.danger;
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText('OUCH!', W/2, H/2 - 10);
+    ctx.fillStyle = P.sub;
+    ctx.font = '12px monospace';
+    ctx.fillText(`lives left: ${lives}`, W/2, H/2 + 10);
+    ctx.textAlign = 'left';
+  }
+
+  function drawGameOver() {
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = P.danger;
+    ctx.font = 'bold 28px monospace';
+    ctx.fillText('GAME OVER', W/2, H/2 - 24);
+    ctx.fillStyle = P.text;
+    ctx.font = '14px monospace';
+    ctx.fillText(`SCORE  ${score}`, W/2, H/2 + 2);
+    if (score >= hiScore) { ctx.fillStyle = '#ffcc00'; ctx.fillText('NEW BEST!', W/2, H/2 + 20); }
+    ctx.fillStyle = P.sub;
+    ctx.font = '12px monospace';
+    ctx.fillText('SPACE / TAP  to restart', W/2, H/2 + 40);
+    ctx.textAlign = 'left';
+  }
+
+  // ── AABB collision ───────────────────────────────────────────────────────────
+  function collides(a, b) {
+    const pad = 4;
+    return a.x + pad < b.x + b.w &&
+           a.x + a.w - pad > b.x &&
+           a.y + pad < b.y + b.h &&
+           a.y + a.h - pad > b.y;
+  }
+
+  // ── main loop ────────────────────────────────────────────────────────────────
+  function update() {
+    frame++;
+
+    // stars scroll
+    stars.forEach(s => { s.x -= s.spd; if (s.x < 0) s.x = W; });
+
+    if (state === 'play') {
+      // score
+      score = Math.floor(frame * gameSpeed / 10);
+      if (score > hiScore) hiScore = score;
+
+      // speed ramp
+      gameSpeed = 4.5 + frame * 0.0015;
+      obsInterval = Math.max(45, 90 - frame * 0.03);
+
+      // rob physics
+      rob.vy += GRAVITY;
+      rob.y  += rob.vy;
+      if (rob.y >= GROUND) { rob.y = GROUND; rob.vy = 0; rob.jumps = 0; }
+      if (rob.invTimer > 0) rob.invTimer--;
+
+      // rob animation
+      rob.frameTimer++;
+      if (rob.frameTimer > 5) { rob.frame = (rob.frame + 1) % 4; rob.frameTimer = 0; }
+
+      // spawn obstacles
+      obsTimer++;
+      if (obsTimer >= obsInterval) { obsTimer = 0; spawnObs(); }
+
+      // move & check obstacles
+      for (let i = obs.length - 1; i >= 0; i--) {
+        obs[i].x -= obs[i].spd;
+        if (obs[i].x + obs[i].w < 0) { obs.splice(i, 1); continue; }
+
+        if (rob.invTimer === 0) {
+          const rRect = { x: rob.x, y: rob.y, w: rob.w, h: rob.h };
+          if (collides(rRect, obs[i])) {
+            burst(rob.x + rob.w/2, rob.y + rob.h/2, P.danger, 10);
+            obs.splice(i, 1);
+            lives--;
+            if (lives <= 0) {
+              state = 'gameover';
+            } else {
+              rob.invTimer = 90;
+              state = 'dead';
+              deadTimer = 60;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    if (state === 'dead') {
+      deadTimer--;
+      if (deadTimer <= 0) { state = 'play'; }
+    }
+
+    // particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 0.04;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function draw() {
+    // bg
+    rect(0, 0, W, H, P.bg);
+
+    // stars
+    stars.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = P.star;
+      ctx.fill();
+    });
+
+    drawGround();
+
+    // particles
+    particles.forEach(p => {
+      ctx.globalAlpha = p.life;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    obs.forEach(drawObs);
+    drawRob();
+    drawHUD();
+
+    if (state === 'title')    drawTitle();
+    if (state === 'dead')     drawDead();
+    if (state === 'gameover') drawGameOver();
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+
+  // expose for cheat.js
+  window.game = {
+    scene: {
+      scenes: [{
+        sys: { isActive: () => true },
+        get score() { return score; },
+        set score(v) { score = v; },
+        get lives() { return lives; },
+        set lives(v) { lives = v; },
+      }]
+    }
+  };
+
+})();
+</script>
 </body>
 </html>
