@@ -24,7 +24,8 @@ public:
         bool  teamCheck    = true;
     } cfg;
 
-    void run(const std::vector<PlayerData>& players, float sw, float sh, const Memory& mem) {
+    void run(const std::vector<PlayerData>& players, float sw, float sh,
+             const Memory& mem, int localTeam = -1) {
         if (!cfg.enabled) return;
         bool keyDown = (GetAsyncKeyState(cfg.key) & 0x8000) != 0;
         if (cfg.holdKey && !keyDown) return;
@@ -34,6 +35,8 @@ public:
         float bestFov = cfg.fovPx;
 
         for (const auto& p : players) {
+            // never aim at teammates
+            if (cfg.teamCheck && localTeam != -1 && p.team == localTeam) continue;
             if (cfg.visCheck && !p.visible) continue;
             // use the configured bone if valid, fall back to scrHead
             Vec2 aimPt = (p.boneValid[cfg.targetBone])

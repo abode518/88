@@ -142,7 +142,7 @@ public:
     }
 
     void update(const Memory& mem, const Matrix4x4& vp,
-                float sw, float sh, const Vec3& localPos)
+                float sw, float sh, const Vec3& localPos, int localTeam = -1)
     {
         players.clear();
         loot.clear();
@@ -160,6 +160,10 @@ public:
             PlayerData pd;
             pd.base   = obj;
             pd.team   = mem.read<int32_t>(obj + Offsets::PlayerTeam);
+
+            // skip teammates
+            if (cfg.teamCheck && localTeam != -1 && pd.team == localTeam) continue;
+
             pd.health = mem.read<float>(obj + Offsets::PlayerHealth);
             pd.maxHp  = mem.read<float>(obj + Offsets::PlayerHealthMax);
             if (pd.health <= 0.f) continue;

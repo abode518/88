@@ -4,6 +4,7 @@
 #pragma once
 #include "memory.h"
 #include "math.h"
+#include "offsets.h"
 #include <cmath>
 
 // Unity 2022 IL2CPP — Camera component internal layout
@@ -34,9 +35,10 @@ inline Matrix4x4 matMul(const Matrix4x4& a, const Matrix4x4& b) {
 }
 
 struct LocalState {
-    Vec3  pos;       // world position
-    Vec3  forward;   // look direction
-    float yaw = 0.f; // Y-axis rotation in radians (for radar)
+    Vec3  pos;
+    Vec3  forward;
+    float yaw  = 0.f;
+    int   team = -1;  // 0=police 1=criminal — used for teammate filter
 };
 
 class CameraReader {
@@ -65,6 +67,7 @@ public:
         if (!xformData) return s;
 
         s.pos     = mem.read<Vec3>(xformData + CamOffsets::TransformDataPos);
+        s.team    = mem.read<int32_t>(localObj + Offsets::PlayerTeam);
 
         // quaternion → yaw
         struct Quat { float x, y, z, w; };

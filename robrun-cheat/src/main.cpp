@@ -466,8 +466,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
         updateLocalState();
         Matrix4x4 vp = getVP();
-        g_esp.update(g_mem, vp, g_overlay.width, g_overlay.height, g_local.pos);
-        g_aim.run(g_esp.players, g_overlay.width, g_overlay.height, g_mem);
+        g_esp.update(g_mem, vp, g_overlay.width, g_overlay.height, g_local.pos, g_local.team);
+        g_aim.run(g_esp.players, g_overlay.width, g_overlay.height, g_mem, g_local.team);
         g_aim.recoilControl(g_mem);
         g_feat.tick(g_mem);
 
