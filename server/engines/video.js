@@ -4,11 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const cfg = require('../config');
 const { MEDIA_DIR } = require('../db');
+const { GENDER_IMAGE_TAGS, describeTraitsImageTags } = require('../traits');
 
 async function startJob({ character, prompt, duration }) {
   if (!cfg.video.baseUrl) throw new Error('VIDEO_BASE_URL غير مضبوط — اضبطه في .env');
 
-  const fullPrompt = `${character.name}, ${character.appearance}, ${prompt}`;
+  const traits = describeTraitsImageTags(character);
+  const fullPrompt = `${character.name}, ${GENDER_IMAGE_TAGS[character.gender] || ''} ${character.appearance}${traits ? ', ' + traits : ''}, ${prompt}`;
   const res = await fetch(`${cfg.video.baseUrl.replace(/\/$/, '')}/generate`, {
     method: 'POST',
     headers: {

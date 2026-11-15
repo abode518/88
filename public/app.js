@@ -28,7 +28,7 @@ async function loadCharacters() {
   chars.forEach((c) => {
     const el = document.createElement('div');
     el.className = 'char-item' + (currentChar && currentChar.id === c.id ? ' active' : '');
-    const genderLabels = { male: 'ولد', female: 'بنت', femboy: 'فيمبوي', tomboy: 'تومبوي' };
+    const genderLabels = { male: 'ولد', female: 'بنت', femboy: 'فيمبوي', tomboy: 'تومبوي', futa: 'فوتا' };
     const kindLabel = c.kind === 'anime' ? 'أنمي' : 'حقيقية';
     const avatarImg = c.avatar_path
       ? `<img class="avatar-xs" src="/media/${c.avatar_path}" alt="" />`
@@ -48,6 +48,7 @@ async function selectCharacter(c) {
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('charView').style.display = 'flex';
   document.getElementById('charName').textContent = c.name;
+  document.getElementById('app').classList.add('char-open'); // بالجوال: يخفي القائمة ويعرض المحادثة كاملة
   const avatarEl = document.getElementById('charAvatar');
   if (c.avatar_path) {
     avatarEl.src = `/media/${c.avatar_path}`;
@@ -59,6 +60,10 @@ async function selectCharacter(c) {
   await loadMessages();
   await loadMedia();
 }
+
+document.getElementById('backToListBtn').onclick = () => {
+  document.getElementById('app').classList.remove('char-open');
+};
 
 async function loadMessages() {
   const msgs = await api(`/api/chat/${currentChar.id}/messages`);
@@ -136,9 +141,10 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach((btn) => {
   };
 });
 
-// ---- نموذج إنشاء شخصية ----
+// ---- نموذج إنشاء/تعديل شخصية ----
 const modalOverlay = document.getElementById('modalOverlay');
-document.getElementById('newCharBtn').onclick = () => (modalOverlay.style.display = 'flex');
+let editingCharacterId = null; // null = إنشاء جديد، غير ذلك = تعديل
+
 document.getElementById('cancelCharBtn').onclick = () => (modalOverlay.style.display = 'none');
 
 // حقول select فيها خيار "أخرى..." تكشف input نصي بجانبها
@@ -159,6 +165,99 @@ function selectValue(selectId, otherId) {
   return sel.value;
 }
 
+// ---- عناصر اختيار السمات الجسدية (دوائر ألوان / كبسولات) ----
+function renderChoiceWidgets() {
+  document.querySelectorAll('.swatch-group').forEach((group) => {
+    const colors = JSON.parse(group.dataset.colors);
+    group.innerHTML = colors
+      .map(([label, hex]) => `<button type="button" class="swatch-btn" data-value="${label}" style="background:${hex}" title="${label}"></button>`)
+      .join('');
+  });
+  document.querySelectorAll('.pill-group').forEach((group) => {
+    const options = JSON.parse(group.dataset.options);
+    const isSize = group.classList.contains('size-group');
+    group.innerHTML = options
+      .map((o) => `<button type="button" class="pill-btn" data-value="${o}">${isSize ? `<span class="bar"></span>${o}` : o}</button>`)
+      .join('');
+  });
+  document.querySelectorAll('.swatch-group, .pill-group').forEach((group) => {
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const wasSelected = btn.classList.contains('selected');
+      group.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+      if (!wasSelected) btn.classList.add('selected');
+    });
+  });
+}
+renderChoiceWidgets();
+
+function getChoiceValue(field) {
+  const group = document.querySelector(`[data-field="${field}"]`);
+  const sel = group.querySelector('.selected');
+  return sel ? sel.dataset.value : '';
+}
+function setChoiceValue(field, value) {
+  const group = document.querySelector(`[data-field="${field}"]`);
+  group.querySelectorAll('button').forEach((b) => b.classList.toggle('selected', b.dataset.value === value));
+}
+function clearAllChoices() {
+  document.querySelectorAll('.swatch-group button, .pill-group button').forEach((b) => b.classList.remove('selected'));
+}
+
+const HAS_PENIS_GENDERS = ['male', 'femboy', 'futa'];
+function updatePenisFieldVisibility() {
+  const show = HAS_PENIS_GENDERS.includes(document.getElementById('f_gender').value);
+  document.getElementById('penisSizeLabel').style.display = show ? 'flex' : 'none';
+}
+document.getElementById('f_gender').onchange = updatePenisFieldVisibility;
+
+function setSelectWithOther(selectId, otherId, value) {
+  const sel = document.getElementById(selectId);
+  const other = document.getElementById(otherId);
+  const hasOption = Array.from(sel.options).some((o) => o.value === value);
+  if (value && !hasOption) {
+    sel.value = 'other';
+    other.value = value;
+    other.style.display = 'block';
+  } else {
+    sel.value = value || sel.options[0].value;
+    other.style.display = 'none';
+    other.value = '';
+  }
+}
+
+function openCharForm(character) {
+  editingCharacterId = character ? character.id : null;
+  document.getElementById('charFormTitle').textContent = character ? `تعديل ${character.name}` : 'شخصية جديدة';
+  document.getElementById('charFormSubmitBtn').textContent = character ? 'حفظ التعديلات' : 'إنشاء';
+  document.getElementById('charForm').reset();
+  clearAllChoices();
+
+  if (character) {
+    document.getElementById('f_name').value = character.name;
+    document.getElementById('f_kind').value = character.kind;
+    document.getElementById('f_gender').value = character.gender;
+    setSelectWithOther('f_role', 'f_role_other', character.role);
+    setSelectWithOther('f_voice', 'f_voice_other', character.voice);
+    setSelectWithOther('f_relationship', 'f_relationship_other', character.relationship_type);
+    document.getElementById('f_appearance').value = character.appearance;
+    document.getElementById('f_personality').value = character.personality;
+    document.getElementById('f_scenario').value = character.scenario || '';
+    setChoiceValue('hairColor', character.hair_color);
+    setChoiceValue('hairstyle', character.hairstyle);
+    setChoiceValue('eyeColor', character.eye_color);
+    setChoiceValue('breastSize', character.breast_size);
+    setChoiceValue('buttSize', character.butt_size);
+    setChoiceValue('penisSize', character.penis_size);
+  }
+  updatePenisFieldVisibility();
+  modalOverlay.style.display = 'flex';
+}
+
+document.getElementById('newCharBtn').onclick = () => openCharForm(null);
+document.getElementById('editCharBtn').onclick = () => openCharForm(currentChar);
+
 document.getElementById('charForm').onsubmit = async (e) => {
   e.preventDefault();
   const payload = {
@@ -168,17 +267,27 @@ document.getElementById('charForm').onsubmit = async (e) => {
     role: selectValue('f_role', 'f_role_other'),
     voice: selectValue('f_voice', 'f_voice_other'),
     relationshipType: selectValue('f_relationship', 'f_relationship_other'),
+    hairColor: getChoiceValue('hairColor'),
+    hairstyle: getChoiceValue('hairstyle'),
+    eyeColor: getChoiceValue('eyeColor'),
+    breastSize: getChoiceValue('breastSize'),
+    buttSize: getChoiceValue('buttSize'),
+    penisSize: getChoiceValue('penisSize'),
     appearance: document.getElementById('f_appearance').value.trim(),
     personality: document.getElementById('f_personality').value.trim(),
     scenario: document.getElementById('f_scenario').value.trim(),
   };
   try {
-    const c = await api('/api/characters', { method: 'POST', body: JSON.stringify(payload) });
+    const c = editingCharacterId
+      ? await api(`/api/characters/${editingCharacterId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      : await api('/api/characters', { method: 'POST', body: JSON.stringify(payload) });
     modalOverlay.style.display = 'none';
     e.target.reset();
+    clearAllChoices();
     await loadCharacters();
     await selectCharacter(c);
-    openAvatarModal();
+    if (!editingCharacterId) openAvatarModal(); // بعد الإنشاء فقط
+    editingCharacterId = null;
   } catch (err) {
     alert(err.message);
   }
@@ -234,6 +343,7 @@ document.getElementById('deleteCharBtn').onclick = async () => {
   currentChar = null;
   document.getElementById('charView').style.display = 'none';
   document.getElementById('emptyState').style.display = 'block';
+  document.getElementById('app').classList.remove('char-open');
   await loadCharacters();
 };
 

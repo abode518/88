@@ -24,11 +24,13 @@
             <img id="charAvatar" class="avatar-sm" src="" alt="" style="display:none" />
             <h2 id="charName"></h2>
           </div>
+          <button id="backToListBtn" class="back-btn">‹ رجوع</button>
           <div class="tabs">
             <button class="tab-btn active" data-tab="chat">شات</button>
             <button class="tab-btn" data-tab="image">صور</button>
             <button class="tab-btn" data-tab="video">فيديو</button>
             <button class="tab-btn" id="regenAvatarBtn">صورة الشخصية</button>
+            <button class="tab-btn" id="editCharBtn">تعديل</button>
             <button class="tab-btn danger" id="deleteCharBtn">حذف الشخصية</button>
           </div>
         </header>
@@ -82,7 +84,7 @@
 
   <div id="modalOverlay" class="modal-overlay" style="display:none">
     <form id="charForm" class="modal">
-      <h3>شخصية جديدة</h3>
+      <h3 id="charFormTitle">شخصية جديدة</h3>
       <label>الاسم<input id="f_name" required /></label>
 
       <label>النمط
@@ -98,8 +100,43 @@
           <option value="female">بنت</option>
           <option value="femboy">فيمبوي (ولد بمظهر أنثوي)</option>
           <option value="tomboy">تومبوي (بنت بمظهر ذكوري)</option>
+          <option value="futa">فوتا (بنت وعندها قضيب)</option>
         </select>
       </label>
+
+      <fieldset class="attrs-fieldset">
+        <legend>السمات الجسدية</legend>
+
+        <label>لون الشعر
+          <div class="swatch-group" data-field="hairColor" data-colors='[
+            ["أسود","#1a1a1a"],["بني","#6b4423"],["أشقر","#d4af37"],["أحمر","#b22222"],
+            ["وردي","#ff9ecb"],["أبيض","#f5f5f5"],["أزرق","#3b6ea5"],["بنفسجي","#8e44ad"]
+          ]'></div>
+        </label>
+
+        <label>قصة الشعر
+          <div class="pill-group" data-field="hairstyle" data-options='["طويل","قصير","مموج","مجعد","ذيل حصان","ضفائر","منكوش"]'></div>
+        </label>
+
+        <label>لون العين
+          <div class="swatch-group" data-field="eyeColor" data-colors='[
+            ["بني","#6b4423"],["عسلي","#c68e3f"],["أزرق","#3b6ea5"],["أخضر","#4a7c59"],
+            ["رمادي","#8a8a99"],["بنفسجي","#8e44ad"],["أحمر","#b22222"],["ذهبي","#d4af37"]
+          ]'></div>
+        </label>
+
+        <label>حجم الصدر
+          <div class="pill-group size-group" data-field="breastSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
+        </label>
+
+        <label>حجم الطيز
+          <div class="pill-group size-group" data-field="buttSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
+        </label>
+
+        <label id="penisSizeLabel">حجم القضيب
+          <div class="pill-group size-group" data-field="penisSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
+        </label>
+      </fieldset>
 
       <label>الدور
         <select id="f_role">
@@ -148,7 +185,7 @@
       <label>السياق/القصة (اختياري)<textarea id="f_scenario"></textarea></label>
       <div class="modal-actions">
         <button type="button" id="cancelCharBtn">إلغاء</button>
-        <button type="submit" class="primary">إنشاء</button>
+        <button type="submit" class="primary" id="charFormSubmitBtn">إنشاء</button>
       </div>
     </form>
   </div>

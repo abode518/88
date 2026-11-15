@@ -16,16 +16,35 @@ body {
   height: 100vh;
   overflow: hidden;
 }
-#app { display: flex; height: 100vh; }
+
+/* ---- تصميم للجوال أولاً: شاشة واحدة بالمرة (قائمة أو محادثة) ---- */
+#app { display: flex; flex-direction: column; height: 100vh; }
 
 .sidebar {
-  width: 280px;
+  width: 100%;
+  height: 100%;
   background: var(--bg2);
-  border-left: 1px solid var(--border);
+  border-left: none;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.main { width: 100%; }
+
+/* بعد اختيار شخصية: نخفي القائمة ونعرض المحادثة بكامل الشاشة */
+#app.char-open .sidebar { display: none; }
+#app:not(.char-open) .main { display: none; }
+
+.back-btn { display: inline-block; margin-bottom: 10px; background: none; border: none; color: var(--accent); font-size: 14px; padding: 4px 0; }
+
+/* ---- من مقاس تابلت/سطح مكتب فأكبر: عمودين جنب بعض دائماً ---- */
+@media (min-width: 900px) {
+  #app { flex-direction: row; }
+  .sidebar { width: 280px; height: auto; border-left: 1px solid var(--border); }
+  #app.char-open .sidebar, #app:not(.char-open) .main { display: flex; }
+  .back-btn { display: none; }
 }
 .sidebar h1 { font-size: 18px; margin: 0 0 8px; }
 
@@ -105,3 +124,34 @@ button.danger { color: #ff6b6b; }
 .modal input, .modal select, .modal textarea { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: #1e1e28; color: var(--text); font-family: inherit; }
 .modal textarea { min-height: 50px; resize: vertical; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* ---- فيلدست السمات الجسدية ---- */
+.attrs-fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.attrs-fieldset legend { font-size: 12px; color: var(--muted); padding: 0 6px; }
+
+.swatch-group, .pill-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+.swatch-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border);
+  cursor: pointer; padding: 0; position: relative;
+}
+.swatch-btn.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent2); }
+.swatch-btn .label {
+  position: absolute; top: 34px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: var(--muted); white-space: nowrap;
+}
+
+.pill-btn {
+  padding: 6px 10px; border-radius: 20px; border: 1px solid var(--border);
+  background: #1e1e28; color: var(--text); font-size: 12px; cursor: pointer;
+}
+.pill-btn.selected { background: linear-gradient(90deg, var(--accent), var(--accent2)); border-color: transparent; }
+
+.size-group .pill-btn { display: flex; align-items: center; gap: 6px; }
+.size-group .pill-btn .bar { display: inline-block; height: 4px; border-radius: 2px; background: currentColor; opacity: .6; }
+.size-group .pill-btn[data-value="صغير"] .bar { width: 8px; }
+.size-group .pill-btn[data-value="متوسط"] .bar { width: 14px; }
+.size-group .pill-btn[data-value="كبير"] .bar { width: 20px; }
+.size-group .pill-btn[data-value="ضخم"] .bar { width: 26px; }
+
+.back-btn { display: none; }

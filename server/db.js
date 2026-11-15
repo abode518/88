@@ -15,10 +15,16 @@ CREATE TABLE IF NOT EXISTS characters (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   kind TEXT NOT NULL,              -- 'anime' | 'realistic'
-  gender TEXT DEFAULT 'female',    -- 'male' | 'female' | 'femboy' | 'tomboy'
+  gender TEXT DEFAULT 'female',    -- 'male' | 'female' | 'femboy' | 'tomboy' | 'futa'
   role TEXT DEFAULT '',            -- دور الشخصية: حبيب/صديق/معلم/...
   voice TEXT DEFAULT '',           -- وصف نمط الصوت
   relationship_type TEXT DEFAULT '', -- نوع العلاقة مع المستخدم
+  hair_color TEXT DEFAULT '',
+  hairstyle TEXT DEFAULT '',
+  eye_color TEXT DEFAULT '',
+  breast_size TEXT DEFAULT '',     -- '' لو الجنس ما يناسبه
+  butt_size TEXT DEFAULT '',
+  penis_size TEXT DEFAULT '',      -- يظهر فقط لـ male/femboy/futa
   appearance TEXT NOT NULL,        -- وصف المظهر (يُحقن في برومبت الصور)
   personality TEXT NOT NULL,       -- وصف الشخصية (يُحقن في system prompt الشات)
   scenario TEXT DEFAULT '',        -- سياق/عالم القصة
@@ -58,5 +64,11 @@ addColIfMissing('gender', `TEXT DEFAULT 'female'`);
 addColIfMissing('role', `TEXT DEFAULT ''`);
 addColIfMissing('voice', `TEXT DEFAULT ''`);
 addColIfMissing('relationship_type', `TEXT DEFAULT ''`);
+addColIfMissing('hair_color', `TEXT DEFAULT ''`);
+addColIfMissing('hairstyle', `TEXT DEFAULT ''`);
+addColIfMissing('eye_color', `TEXT DEFAULT ''`);
+addColIfMissing('breast_size', `TEXT DEFAULT ''`);
+addColIfMissing('butt_size', `TEXT DEFAULT ''`);
+addColIfMissing('penis_size', `TEXT DEFAULT ''`);
 
 module.exports = { db, MEDIA_DIR, DATA_DIR };

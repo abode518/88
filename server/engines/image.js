@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const cfg = require('../config');
 const { MEDIA_DIR } = require('../db');
+const { GENDER_IMAGE_TAGS, describeTraitsImageTags } = require('../traits');
 
 function stylePrefix(kind) {
   return kind === 'anime'
@@ -11,24 +12,19 @@ function stylePrefix(kind) {
     : 'photorealistic, high detail, realistic lighting, ';
 }
 
-const GENDER_TAGS = {
-  male: 'male,',
-  female: 'female,',
-  femboy: 'male body, feminine features, androgynous,',
-  tomboy: 'female body, masculine features, androgynous,',
-};
-
 // برومبت افتراضي للأفاتار يُبنى بالكامل من اختيارات الشخصية إذا المستخدم ما كتب تفاصيل خاصة
 function autoAvatarPrompt(character) {
-  return `${GENDER_TAGS[character.gender] || ''} portrait, looking at viewer, upper body, ${character.appearance}`;
+  const traits = describeTraitsImageTags(character);
+  return `${GENDER_IMAGE_TAGS[character.gender] || ''} portrait, looking at viewer, upper body, ${character.appearance}${traits ? ', ' + traits : ''}`;
 }
 
 async function generateImage({ character, prompt, negativePrompt, width, height, steps }) {
   if (!cfg.image.baseUrl) throw new Error('IMAGE_BASE_URL غير مضبوط — اضبطه في .env');
 
+  const traits = describeTraitsImageTags(character);
   const userPrompt = prompt && prompt.trim() ? prompt.trim() : autoAvatarPrompt(character);
   // البرومبت يُنفَّذ كما هو بدون أي فلترة أو حذف من جهة الموقع — القيد الوحيد هو ما يفرضه محرك الصور المربوط
-  const fullPrompt = `${stylePrefix(character.kind)}${character.appearance}, ${userPrompt}`;
+  const fullPrompt = `${stylePrefix(character.kind)}${character.appearance}${traits ? ', ' + traits : ''}, ${userPrompt}`;
   width = width || 768;
   height = height || 768;
   steps = steps || 28;

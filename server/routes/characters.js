@@ -17,7 +17,21 @@ router.get('/:id', (req, res) => {
   res.json(row);
 });
 
-const GENDERS = ['male', 'female', 'femboy', 'tomboy'];
+// futa: جسد أنثوي + قضيب — خيار جنس مستقل
+const GENDERS = ['male', 'female', 'femboy', 'tomboy', 'futa'];
+// الأجناس اللي تملك قضيب (يتحكم بإظهار حقل penis_size بالواجهة)
+const HAS_PENIS = ['male', 'femboy', 'futa'];
+
+function extractBodyFields(body) {
+  return {
+    hairColor: body.hairColor || '',
+    hairstyle: body.hairstyle || '',
+    eyeColor: body.eyeColor || '',
+    breastSize: body.breastSize || '',
+    buttSize: body.buttSize || '',
+    penisSize: body.penisSize || '',
+  };
+}
 
 router.post('/', (req, res) => {
   const { name, kind, gender, role, voice, relationshipType, appearance, personality, scenario, unrestricted } =
@@ -31,11 +45,16 @@ router.post('/', (req, res) => {
   if (!GENDERS.includes(gender)) {
     return res.status(400).json({ error: `gender يجب أن يكون واحد من: ${GENDERS.join(', ')}` });
   }
+  const body = extractBodyFields(req.body || {});
+  if (!HAS_PENIS.includes(gender)) body.penisSize = ''; // تجاهل القيمة لو الجنس ما يناسبها
+
   const id = nanoid();
   db.prepare(
     `INSERT INTO characters
-       (id, name, kind, gender, role, voice, relationship_type, appearance, personality, scenario, unrestricted, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, name, kind, gender, role, voice, relationship_type,
+        hair_color, hairstyle, eye_color, breast_size, butt_size, penis_size,
+        appearance, personality, scenario, unrestricted, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     name,
@@ -44,6 +63,12 @@ router.post('/', (req, res) => {
     role || '',
     voice || '',
     relationshipType || '',
+    body.hairColor,
+    body.hairstyle,
+    body.eyeColor,
+    body.breastSize,
+    body.buttSize,
+    body.penisSize,
     appearance,
     personality,
     scenario || '',
@@ -52,6 +77,54 @@ router.post('/', (req, res) => {
   );
 
   res.status(201).json(db.prepare('SELECT * FROM characters WHERE id = ?').get(id));
+});
+
+// تعديل شخصية موجودة — كل الحقول اختيارية، يحدّث فقط ما يُرسل
+router.patch('/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM characters WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'الشخصية غير موجودة' });
+
+  const b = req.body || {};
+  if (b.kind && !['anime', 'realistic'].includes(b.kind)) {
+    return res.status(400).json({ error: "kind يجب أن يكون 'anime' أو 'realistic'" });
+  }
+  if (b.gender && !GENDERS.includes(b.gender)) {
+    return res.status(400).json({ error: `gender يجب أن يكون واحد من: ${GENDERS.join(', ')}` });
+  }
+
+  const nextGender = b.gender || existing.gender;
+  const body = extractBodyFields(b);
+
+  const merged = {
+    name: b.name ?? existing.name,
+    kind: b.kind ?? existing.kind,
+    gender: nextGender,
+    role: b.role ?? existing.role,
+    voice: b.voice ?? existing.voice,
+    relationship_type: b.relationshipType ?? existing.relationship_type,
+    hair_color: b.hairColor !== undefined ? body.hairColor : existing.hair_color,
+    hairstyle: b.hairstyle !== undefined ? body.hairstyle : existing.hairstyle,
+    eye_color: b.eyeColor !== undefined ? body.eyeColor : existing.eye_color,
+    breast_size: b.breastSize !== undefined ? body.breastSize : existing.breast_size,
+    butt_size: b.buttSize !== undefined ? body.buttSize : existing.butt_size,
+    penis_size: b.penisSize !== undefined ? body.penisSize : existing.penis_size,
+    appearance: b.appearance ?? existing.appearance,
+    personality: b.personality ?? existing.personality,
+    scenario: b.scenario ?? existing.scenario,
+    unrestricted: b.unrestricted === false ? 0 : b.unrestricted === true ? 1 : existing.unrestricted,
+  };
+  if (!HAS_PENIS.includes(merged.gender)) merged.penis_size = '';
+
+  db.prepare(
+    `UPDATE characters SET
+       name=@name, kind=@kind, gender=@gender, role=@role, voice=@voice, relationship_type=@relationship_type,
+       hair_color=@hair_color, hairstyle=@hairstyle, eye_color=@eye_color,
+       breast_size=@breast_size, butt_size=@butt_size, penis_size=@penis_size,
+       appearance=@appearance, personality=@personality, scenario=@scenario, unrestricted=@unrestricted
+     WHERE id=@id`
+  ).run({ ...merged, id: existing.id });
+
+  res.json(db.prepare('SELECT * FROM characters WHERE id = ?').get(existing.id));
 });
 
 // توليد/إعادة توليد صورة الشخصية — prompt اختياري: فاضي = تلقائي بناءً على اختيارات الشخصية

@@ -1,15 +1,10 @@
 // llm.js — عميل متوافق مع OpenAI /chat/completions لأي محرك شات تشغّله أو تدفع له
 const fetch = require('node-fetch');
 const cfg = require('../config');
-
-const GENDER_LABELS = {
-  male: 'ذكر',
-  female: 'أنثى',
-  femboy: 'فيمبوي (مظهر وطاقة أنثوية في جسد ذكوري)',
-  tomboy: 'تومبوي (مظهر وطاقة ذكورية في جسد أنثوي)',
-};
+const { GENDER_LABELS, describeTraitsArabic } = require('../traits');
 
 function buildSystemPrompt(character) {
+  const traits = describeTraitsArabic(character);
   const base = [
     `أنت تجسّد شخصية اسمها "${character.name}".`,
     `النوع: ${GENDER_LABELS[character.gender] || character.gender}`,
@@ -17,6 +12,7 @@ function buildSystemPrompt(character) {
     character.relationship_type ? `نوع العلاقة مع المستخدم: ${character.relationship_type}` : '',
     character.voice ? `نمط الصوت: ${character.voice} — اجعل أسلوب الكلام الكتابي يعكس هذا الصوت (نغمة، إيقاع، تعبيرات).` : '',
     `المظهر: ${character.appearance}`,
+    traits ? `سمات جسدية: ${traits}` : '',
     `الشخصية والطابع: ${character.personality}`,
     character.scenario ? `السياق/القصة: ${character.scenario}` : '',
   ];
