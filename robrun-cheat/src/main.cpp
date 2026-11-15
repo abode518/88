@@ -82,13 +82,17 @@ static void drawESP(ImDrawList* dl) {
         if (g_esp.cfg.playerHealth)
             Overlay::drawHealthBar(dl, bp, bH, p.health, p.maxHp);
 
-        if (g_esp.cfg.playerName || g_esp.cfg.playerDist) {
-            std::string lbl = p.name;
+        // team badge — always shown, حتى لو الاسم مخفي
+        {
+            const char* tag   = (p.team == 0) ? "[COP]" : "[CRIM]";
+            uint32_t    tagCol = (p.team == 0) ? 0xFF88DDFF : 0xFF4466FF;
+            std::string lbl   = std::string(tag);
+            if (g_esp.cfg.playerName) lbl += " " + p.name;
             if (g_esp.cfg.playerDist) lbl += "  " + std::to_string(static_cast<int>(p.dist)) + "m";
-            Overlay::drawText(dl, {bp.x, bp.y - 14.f}, col, lbl);
+            Overlay::drawText(dl, {bp.x, bp.y - 14.f}, tagCol, lbl);
         }
 
-        // snapline from bottom center to target feet
+        // snapline
         Overlay::drawLine(dl,
             {g_overlay.width * 0.5f, g_overlay.height},
             p.scrFeet,
@@ -96,27 +100,47 @@ static void drawESP(ImDrawList* dl) {
     }
 
     for (const auto& l : g_esp.loot) {
-        Overlay::drawCircle(dl, l.scr, 3.f, g_esp.cfg.colLoot, 6);
-        Overlay::drawText(dl, {l.scr.x + 5, l.scr.y - 6}, g_esp.cfg.colLoot, l.name);
+        // diamond shape لللوت — أوضح من دائرة
+        float d = 5.f;
+        Vec2 lp = l.scr;
+        Overlay::drawLine(dl, {lp.x,   lp.y-d}, {lp.x+d, lp.y  }, g_esp.cfg.colLoot, 1.5f);
+        Overlay::drawLine(dl, {lp.x+d, lp.y  }, {lp.x,   lp.y+d}, g_esp.cfg.colLoot, 1.5f);
+        Overlay::drawLine(dl, {lp.x,   lp.y+d}, {lp.x-d, lp.y  }, g_esp.cfg.colLoot, 1.5f);
+        Overlay::drawLine(dl, {lp.x-d, lp.y  }, {lp.x,   lp.y-d}, g_esp.cfg.colLoot, 1.5f);
+        Overlay::drawText(dl, {lp.x + 8, lp.y - 6}, g_esp.cfg.colLoot, l.name);
     }
 
     if (g_esp.cfg.radarESP) {
         Vec2 rc { g_overlay.width - g_esp.cfg.radarRadius - 10.f,
                   10.f + g_esp.cfg.radarRadius };
-        Overlay::drawCircle(dl, rc, g_esp.cfg.radarRadius, 0xAA000000);
-        Overlay::drawCircle(dl, rc, g_esp.cfg.radarRadius, 0x55FFFFFF);
-        // crosshair
-        Overlay::drawLine(dl, {rc.x - 4, rc.y}, {rc.x + 4, rc.y}, 0x88FFFFFF);
-        Overlay::drawLine(dl, {rc.x, rc.y - 4}, {rc.x, rc.y + 4}, 0x88FFFFFF);
+        // bg fill
+        Overlay::drawBoxFilled(dl,
+            {rc.x - g_esp.cfg.radarRadius, rc.y - g_esp.cfg.radarRadius},
+            g_esp.cfg.radarRadius * 2, g_esp.cfg.radarRadius * 2, 0xBB000000);
+        Overlay::drawBox(dl,
+            {rc.x - g_esp.cfg.radarRadius, rc.y - g_esp.cfg.radarRadius},
+            g_esp.cfg.radarRadius * 2, g_esp.cfg.radarRadius * 2, 0x88FFFFFF);
+        // crosshair (local player)
+        Overlay::drawLine(dl, {rc.x-6, rc.y}, {rc.x+6, rc.y}, 0xFFFFFFFF);
+        Overlay::drawLine(dl, {rc.x, rc.y-6}, {rc.x, rc.y+6}, 0xFFFFFFFF);
+
         for (const auto& p : g_esp.players) {
+            // FILL: rotate delta by local player yaw for correct orientation
             float rx = rc.x + p.feet.x * g_esp.cfg.radarScale;
             float ry = rc.y + p.feet.z * g_esp.cfg.radarScale;
-            if (std::abs(rx - rc.x) < g_esp.cfg.radarRadius &&
-                std::abs(ry - rc.y) < g_esp.cfg.radarRadius) {
-                uint32_t c = (p.team == 0) ? g_esp.cfg.colPolice : g_esp.cfg.colCriminal;
-                Overlay::drawCircle(dl, {rx, ry}, 3.f, c, 6);
-            }
+            float dx = rx - rc.x, dy = ry - rc.y;
+            if (dx*dx + dy*dy > g_esp.cfg.radarRadius * g_esp.cfg.radarRadius) continue;
+
+            uint32_t c = (p.team == 0) ? g_esp.cfg.colPolice : g_esp.cfg.colCriminal;
+            // triangle pointing "up" per player
+            Overlay::drawLine(dl, {rx,   ry-4}, {rx+3, ry+3}, c, 1.5f);
+            Overlay::drawLine(dl, {rx+3, ry+3}, {rx-3, ry+3}, c, 1.5f);
+            Overlay::drawLine(dl, {rx-3, ry+3}, {rx,   ry-4}, c, 1.5f);
         }
+        // label
+        Overlay::drawText(dl,
+            {rc.x - g_esp.cfg.radarRadius, rc.y + g_esp.cfg.radarRadius + 2},
+            0x88FFFFFF, "RADAR");
     }
 
     if (g_aim.cfg.enabled)
@@ -153,13 +177,24 @@ static void drawMenu() {
 
         // ── ESP tab ────────────────────────────────────────────────────────
         if (ImGui::BeginTabItem("ESP")) {
+            ImGui::TextColored({0.f,0.8f,1.f,1.f}, "Players");
             ImGui::Checkbox("Boxes",           &g_cfg.esp.playerBoxes);
             ImGui::Checkbox("Health bars",     &g_cfg.esp.playerHealth);
             ImGui::Checkbox("Names",           &g_cfg.esp.playerName);
             ImGui::Checkbox("Distance",        &g_cfg.esp.playerDist);
+            ImGui::Checkbox("Team check (skip same)", &g_cfg.esp.teamCheck);
+            ImGui::SliderFloat("Max dist (m)", &g_cfg.esp.maxDist, 50.f, 600.f, "%.0f");
+            ImGui::Separator();
+            ImGui::TextColored({0.f,0.8f,1.f,1.f}, "World");
             ImGui::Checkbox("Loot ESP",        &g_cfg.esp.lootESP);
             ImGui::Checkbox("Radar",           &g_cfg.esp.radarESP);
-            ImGui::SliderFloat("Max dist (m)", &g_cfg.esp.maxDist, 50.f, 600.f, "%.0f");
+            ImGui::Separator();
+            // live team count
+            int cops = 0, crims = 0;
+            for (auto& p : g_esp.players) { if (p.team==0) cops++; else crims++; }
+            ImGui::TextColored({0.6f,0.9f,1.f,1.f}, "[COP]  %d", cops);
+            ImGui::SameLine(0,16);
+            ImGui::TextColored({1.f,0.6f,0.6f,1.f}, "[CRIM] %d", crims);
             ImGui::EndTabItem();
         }
 
@@ -182,15 +217,15 @@ static void drawMenu() {
 
         // ── Misc tab ───────────────────────────────────────────────────────
         if (ImGui::BeginTabItem("Misc")) {
-            ImGui::Checkbox("God mode",        &g_cfg.feat.godMode);
             ImGui::Checkbox("Unlimited money", &g_cfg.feat.unlimMoney);
             if (g_cfg.feat.unlimMoney)
                 ImGui::SliderInt("Amount", &g_cfg.feat.moneyAmount, 1000, 9999999);
+            ImGui::Separator();
             ImGui::Checkbox("Speed hack",      &g_cfg.feat.speedHack);
             if (g_cfg.feat.speedHack)
                 ImGui::SliderFloat("Speed mult", &g_cfg.feat.speedMult, 1.f, 5.f, "%.1fx");
-            ImGui::Checkbox("Fly mode",        &g_cfg.feat.flyMode);
             ImGui::Checkbox("Noclip",          &g_cfg.feat.noclip);
+            ImGui::Separator();
             ImGui::Checkbox("Rapid fire",      &g_cfg.feat.rapidFire);
             ImGui::Checkbox("Unlimited ammo",  &g_cfg.feat.unlimAmmo);
             ImGui::Checkbox("Unlimited dura",  &g_cfg.feat.unlimDura);

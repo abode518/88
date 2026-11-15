@@ -23,10 +23,8 @@ namespace OffExt {
 class Features {
 public:
     struct Config {
-        bool godMode      = false;
         bool unlimMoney   = false;
         bool speedHack    = false;   float speedMult = 1.5f;
-        bool flyMode      = false;
         bool noclip       = false;
         bool rapidFire    = false;   float fireMult  = 5.f;
         bool unlimAmmo    = false;
@@ -39,11 +37,6 @@ public:
         uintptr_t localPtr  = mem.read<uintptr_t>(localBase);
         if (!localPtr) return;
 
-        if (cfg.godMode) {
-            mem.write<float>(localPtr + Offsets::PlayerHealth,    999.f);
-            mem.write<float>(localPtr + Offsets::PlayerHealthMax, 999.f);
-        }
-
         if (cfg.unlimMoney) {
             uintptr_t econ = mem.read<uintptr_t>(localPtr + OffExt::Money);
             if (econ) mem.write<int>(econ, cfg.moneyAmount);
@@ -51,11 +44,7 @@ public:
 
         if (cfg.speedHack) {
             uintptr_t move = mem.read<uintptr_t>(localPtr + OffExt::MoveSpeed);
-            if (move) mem.write<float>(move, cfg.speedMult * 6.f); // 6.0 = default walk speed
-        }
-
-        if (cfg.flyMode) {
-            mem.write<bool>(localPtr + OffExt::GravityScale, false);
+            if (move) mem.write<float>(move, cfg.speedMult * 6.f);
         }
 
         if (cfg.noclip) {
