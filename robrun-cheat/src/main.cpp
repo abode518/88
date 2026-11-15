@@ -28,19 +28,23 @@
 #include "math.h"
 #include "offsets.h"
 #include "scanner.h"
+#include "camera.h"
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 
 // ── globals ───────────────────────────────────────────────────────────────────
-static Memory    g_mem;
-static Overlay   g_overlay;
-static ESP       g_esp;
-static Aimbot    g_aim;
-static Features  g_feat;
-static ConfigMgr g_cfgMgr;
-static FullConfig g_cfg;
+static Memory       g_mem;
+static Overlay      g_overlay;
+static ESP          g_esp;
+static Aimbot       g_aim;
+static Features     g_feat;
+static ConfigMgr    g_cfgMgr;
+static FullConfig   g_cfg;
+static CameraReader g_cam;
+static LocalState   g_local;
+static bool         g_streamProof = true;
 
 static std::atomic<bool> g_running = true;
 static bool  g_menuOpen    = false;
@@ -53,53 +57,70 @@ static void rsleep(int baseMs) {
         std::chrono::milliseconds(baseMs + (rand() % (baseMs / 4 + 1))));
 }
 
-// ── camera VP matrix ──────────────────────────────────────────────────────────
+// ── camera VP matrix + local state ───────────────────────────────────────────
 static Matrix4x4 getVP() {
-    // FILL: exact ptr chain from your dump
-    // example Unity chain: GameAssembly.dll + Camera_static → Camera obj → ViewMatrix
-    return g_mem.read<Matrix4x4>(g_mem.base + Offsets::CameraStaticField + Offsets::ViewMatrix);
+    return g_cam.getVP(g_mem, Offsets::CameraStaticField);
+}
+
+static void updateLocalState() {
+    g_local = g_cam.getLocal(g_mem, OffExt::LocalPlayer);
 }
 
 // ── ESP draw ──────────────────────────────────────────────────────────────────
 static void drawESP(ImDrawList* dl) {
     for (const auto& p : g_esp.players) {
         float bH = p.scrFeet.y - p.scrHead.y;
+        if (bH < 4.f) continue;  // too small / too far
         float bW = bH * 0.4f;
         Vec2  bp { p.scrHead.x - bW * 0.5f, p.scrHead.y };
         uint32_t col = (p.team == 0) ? g_esp.cfg.colPolice : g_esp.cfg.colCriminal;
 
-        if (g_esp.cfg.playerBoxes) {
-            // corner-box (less screenshot-detectable than full rect)
-            float c = bW * 0.25f;
-            auto L = [&](Vec2 a, Vec2 b) { Overlay::drawLine(dl, a, b, col, 1.5f); };
-            L(bp,                    {bp.x+c,    bp.y     });
-            L(bp,                    {bp.x,      bp.y+c   });
-            L({bp.x+bW, bp.y},       {bp.x+bW-c, bp.y     });
-            L({bp.x+bW, bp.y},       {bp.x+bW,   bp.y+c   });
-            L({bp.x,    bp.y+bH},    {bp.x+c,    bp.y+bH  });
-            L({bp.x,    bp.y+bH},    {bp.x,      bp.y+bH-c});
-            L({bp.x+bW, bp.y+bH},    {bp.x+bW-c, bp.y+bH  });
-            L({bp.x+bW, bp.y+bH},    {bp.x+bW,   bp.y+bH-c});
+        // ── skeleton ──────────────────────────────────────────────────────────
+        if (g_esp.cfg.playerSkeleton) {
+            for (auto [a, b] : SKELETON_EDGES) {
+                if (p.boneValid[a] && p.boneValid[b]) {
+                    Overlay::drawLine(dl, p.boneScr[a], p.boneScr[b],
+                                      g_esp.cfg.colSkel, 1.2f);
+                }
+            }
+            // head dot
+            if (p.boneValid[Bone::Head])
+                Overlay::drawCircle(dl, p.boneScr[Bone::Head], 3.f, col, 8);
         }
 
+        // ── corner box ────────────────────────────────────────────────────────
+        if (g_esp.cfg.playerBoxes) {
+            float c = bW * 0.25f;
+            auto L = [&](Vec2 a, Vec2 b) { Overlay::drawLine(dl, a, b, col, 1.5f); };
+            L(bp,                 {bp.x+c,    bp.y     });
+            L(bp,                 {bp.x,      bp.y+c   });
+            L({bp.x+bW, bp.y},    {bp.x+bW-c, bp.y     });
+            L({bp.x+bW, bp.y},    {bp.x+bW,   bp.y+c   });
+            L({bp.x,  bp.y+bH},   {bp.x+c,    bp.y+bH  });
+            L({bp.x,  bp.y+bH},   {bp.x,      bp.y+bH-c});
+            L({bp.x+bW,bp.y+bH},  {bp.x+bW-c, bp.y+bH  });
+            L({bp.x+bW,bp.y+bH},  {bp.x+bW,   bp.y+bH-c});
+        }
+
+        // ── health bar ────────────────────────────────────────────────────────
         if (g_esp.cfg.playerHealth)
             Overlay::drawHealthBar(dl, bp, bH, p.health, p.maxHp);
 
-        // team badge — always shown, حتى لو الاسم مخفي
+        // ── label [COP]/[CRIM] + name + dist ─────────────────────────────────
         {
-            const char* tag   = (p.team == 0) ? "[COP]" : "[CRIM]";
-            uint32_t    tagCol = (p.team == 0) ? 0xFF88DDFF : 0xFF4466FF;
-            std::string lbl   = std::string(tag);
+            const char* tag    = (p.team == 0) ? "[COP]" : "[CRIM]";
+            uint32_t    tagCol = (p.team == 0) ? 0xFF88DDFF : 0xFF6677FF;
+            std::string lbl    = tag;
             if (g_esp.cfg.playerName) lbl += " " + p.name;
             if (g_esp.cfg.playerDist) lbl += "  " + std::to_string(static_cast<int>(p.dist)) + "m";
             Overlay::drawText(dl, {bp.x, bp.y - 14.f}, tagCol, lbl);
         }
 
-        // snapline
+        // ── snapline ─────────────────────────────────────────────────────────
         Overlay::drawLine(dl,
             {g_overlay.width * 0.5f, g_overlay.height},
             p.scrFeet,
-            (col & 0x00FFFFFF) | 0x33000000, 0.8f);
+            (col & 0x00FFFFFF) | 0x33000000, 0.7f);
     }
 
     for (const auto& l : g_esp.loot) {
@@ -127,15 +148,22 @@ static void drawESP(ImDrawList* dl) {
         Overlay::drawLine(dl, {rc.x-6, rc.y}, {rc.x+6, rc.y}, 0xFFFFFFFF);
         Overlay::drawLine(dl, {rc.x, rc.y-6}, {rc.x, rc.y+6}, 0xFFFFFFFF);
 
+        // rotate each player position by -localYaw so radar always
+        // points "forward" at the top (like a compass)
+        float sinY = std::sin(-g_local.yaw);
+        float cosY = std::cos(-g_local.yaw);
+
         for (const auto& p : g_esp.players) {
-            // FILL: rotate delta by local player yaw for correct orientation
-            float rx = rc.x + p.feet.x * g_esp.cfg.radarScale;
-            float ry = rc.y + p.feet.z * g_esp.cfg.radarScale;
-            float dx = rx - rc.x, dy = ry - rc.y;
-            if (dx*dx + dy*dy > g_esp.cfg.radarRadius * g_esp.cfg.radarRadius) continue;
+            // delta from local player
+            float dx = p.feet.x - g_local.pos.x;
+            float dz = p.feet.z - g_local.pos.z;
+            // rotate by -yaw
+            float rx = rc.x + (dx * cosY - dz * sinY) * g_esp.cfg.radarScale;
+            float ry = rc.y + (dx * sinY + dz * cosY) * g_esp.cfg.radarScale;
+            float ex = rx - rc.x, ey = ry - rc.y;
+            if (ex*ex + ey*ey > g_esp.cfg.radarRadius * g_esp.cfg.radarRadius) continue;
 
             uint32_t c = (p.team == 0) ? g_esp.cfg.colPolice : g_esp.cfg.colCriminal;
-            // triangle pointing "up" per player
             Overlay::drawLine(dl, {rx,   ry-4}, {rx+3, ry+3}, c, 1.5f);
             Overlay::drawLine(dl, {rx+3, ry+3}, {rx-3, ry+3}, c, 1.5f);
             Overlay::drawLine(dl, {rx-3, ry+3}, {rx,   ry-4}, c, 1.5f);
@@ -241,12 +269,15 @@ static void drawMenu() {
 
         // ── Config tab ─────────────────────────────────────────────────────
         if (ImGui::BeginTabItem("Config")) {
-            if (ImGui::Button("Save config")) {
-                g_cfg.magic = 0xDEADC0DE;
-                g_cfgMgr.save(g_cfg);
-            }
+            if (ImGui::Button("Save")) { g_cfg.magic=0xDEADC0DE; g_cfgMgr.save(g_cfg); }
             ImGui::SameLine();
-            if (ImGui::Button("Load config")) g_cfgMgr.load(g_cfg);
+            if (ImGui::Button("Load")) g_cfgMgr.load(g_cfg);
+            ImGui::Separator();
+            // stream proof toggle
+            if (ImGui::Checkbox("Stream proof (hide from OBS/capture)", &g_streamProof))
+                g_overlay.applyStreamProof(g_streamProof);
+            ImGui::TextColored({0.4f,0.4f,0.4f,1.f},
+                "invisible to OBS, Game Bar, screenshots");
             ImGui::Separator();
             ImGui::TextColored({0.4f,0.4f,0.4f,1.f}, "Config: %%APPDATA%%\\Microsoft\\config.bin");
             ImGui::EndTabItem();
@@ -312,8 +343,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         g_aim.cfg  = g_cfg.aim;
         g_feat.cfg = g_cfg.feat;
 
+        updateLocalState();
         Matrix4x4 vp = getVP();
-        g_esp.update(g_mem, vp, g_overlay.width, g_overlay.height);
+        g_esp.update(g_mem, vp, g_overlay.width, g_overlay.height, g_local.pos);
         g_aim.run(g_esp.players, g_overlay.width, g_overlay.height, g_mem);
         g_aim.recoilControl(g_mem);
         g_feat.tick(g_mem);

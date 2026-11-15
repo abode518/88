@@ -35,7 +35,7 @@ public:
         WNDCLASSEXW wc{ sizeof(wc) };
         wc.lpfnWndProc   = DefWindowProcW;
         wc.hInstance     = GetModuleHandleW(nullptr);
-        wc.lpszClassName = L"D3DOverlay";   // generic name, not "cheat"
+        wc.lpszClassName = L"D3DOverlay";
         RegisterClassExW(&wc);
 
         hwnd = CreateWindowExW(
@@ -48,6 +48,15 @@ public:
         if (!hwnd) return false;
 
         SetLayeredWindowAttributes(hwnd, RGB(0,0,0), 0, LWA_COLORKEY);
+
+        // ── stream proof ─────────────────────────────────────────────────────
+        // WDA_EXCLUDEFROMCAPTURE (0x11): overlay invisible to OBS, Game Bar,
+        // screenshots, and any DWM-based capture — still visible on the monitor
+        // requires Windows 10 2004+ (build 19041)
+        // defeats: OBS screen capture, Windows Game Bar, Nvidia ShadowPlay,
+        //          screenshot-based anticheat visual detection
+        applyStreamProof();
+
         ShowWindow(hwnd, SW_SHOW);
         UpdateWindow(hwnd);
 
@@ -96,6 +105,19 @@ public:
 
     void endFrame() {
         swapChain->Present(0, 0);
+    }
+
+    // stream proof toggle — call after init() or any time
+    void applyStreamProof(bool enable = true) {
+        if (!hwnd) return;
+        // WDA_EXCLUDEFROMCAPTURE = 0x11  (defined in Windows SDK 10.0.19041+)
+        // WDA_NONE = 0x0
+        constexpr DWORD WDA_EXCLUDEFROMCAPTURE = 0x11;
+        using Fn = BOOL(WINAPI*)(HWND, DWORD);
+        static Fn fn = reinterpret_cast<Fn>(
+            GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetWindowDisplayAffinity"));
+        if (fn) fn(hwnd, enable ? WDA_EXCLUDEFROMCAPTURE : 0);
+        // graceful fallback: if running on older Windows, fn==nullptr → no-op
     }
 
     void cleanup() {
