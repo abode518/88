@@ -262,7 +262,7 @@ static void drawMenu() {
     ImGui::SameLine(0,0); ImGui::TextColored({0.5f,0.8f,1.f,1.f},"%d",cops);
     ImGui::SameLine(0,6); ImGui::TextColored({0.4f,0.4f,0.4f,1.f},"CRIM ");
     ImGui::SameLine(0,0); ImGui::TextColored({1.f,0.5f,0.5f,1.f},"%d",crims);
-    ImGui::SameLine(0,6); ImGui::TextColored({0.3f,0.3f,0.3f,1.f},"| INSERT  END");
+    ImGui::SameLine(0,6); ImGui::TextColored({0.3f,0.3f,0.3f,1.f},"| HOME  END");
     ImGui::EndChild();
     ImGui::PopStyleColor();
 
@@ -278,13 +278,8 @@ static void drawMenu() {
         // ════════════════ ESP ════════════════════════════════════════════════
         if (ImGui::BeginTabItem("  ESP  ")) {
             SectionHeader("PLAYERS");
-            // helper: keybind hint aligned right
-            auto Key = [](const char* k) {
-                ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize(k).x - 14);
-                ImGui::TextColored({0.35f,0.35f,0.35f,1.f}, "%s", k);
-            };
-            ImGui::Checkbox("Boxes",     &g_cfg.esp.playerBoxes);    Key("[F2]");
-            ImGui::Checkbox("Skeleton",  &g_cfg.esp.playerSkeleton); Key("[F3]");
+            ImGui::Checkbox("Boxes",     &g_cfg.esp.playerBoxes);
+            ImGui::Checkbox("Skeleton",  &g_cfg.esp.playerSkeleton);
             ImGui::Checkbox("Health",    &g_cfg.esp.playerHealth);
             ImGui::Checkbox("Names",     &g_cfg.esp.playerName);
             ImGui::Checkbox("Distance",  &g_cfg.esp.playerDist);
@@ -316,15 +311,11 @@ static void drawMenu() {
         if (ImGui::BeginTabItem("  AIM  ")) {
             SectionHeader("AIMBOT");
             ImGui::Checkbox("Enable  (hold RMB)", &g_cfg.aim.enabled);
-            {
-                ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize("[F1]").x - 14);
-                ImGui::TextColored({0.35f,0.35f,0.35f,1.f}, "[F1]");
-            }
             ImGui::Spacing();
             ImGui::BeginDisabled(!g_cfg.aim.enabled);
             ImGui::PushItemWidth(-1);
             ImGui::SliderFloat("##fov",  &g_cfg.aim.fovPx,  20.f, 500.f, "FOV radius  %.0f px");
-            ImGui::SliderFloat("##smth", &g_cfg.aim.smooth,  1.f,  20.f, "Smooth  %.1f   [NUM+/-]");
+            ImGui::SliderFloat("##smth", &g_cfg.aim.smooth,  1.f,  20.f, "Smooth  %.1f");
             ImGui::PopItemWidth();
             const char* bones[] = {"Hips","Chest","Head"};
             int boneIdx = (g_cfg.aim.targetBone == Offsets::BoneHead)  ? 2 :
@@ -360,10 +351,6 @@ static void drawMenu() {
 
             SectionHeader("MOVEMENT");
             ImGui::Checkbox("Speed hack", &g_cfg.feat.speedHack);
-            {
-                ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize("[F6]").x - 14);
-                ImGui::TextColored({0.35f,0.35f,0.35f,1.f}, "[F6]");
-            }
             if (g_cfg.feat.speedHack) {
                 ImGui::PushItemWidth(-1);
                 ImGui::SliderFloat("##spd", &g_cfg.feat.speedMult, 1.f, 5.f, "Mult  x%.1f");
@@ -387,19 +374,6 @@ static void drawMenu() {
 
         // ════════════════ SETTINGS ═══════════════════════════════════════════
         if (ImGui::BeginTabItem("  SET  ")) {
-            SectionHeader("HOTKEYS");
-            ImGui::TextColored({0.5f,0.5f,0.5f,1.f},
-                " INSERT    open / close menu\n"
-                " F1        aimbot on/off\n"
-                " F2        boxes on/off\n"
-                " F3        skeleton on/off\n"
-                " F4        radar on/off\n"
-                " F5        loot ESP on/off\n"
-                " F6        speed hack on/off\n"
-                " NUM +/-   aimbot smooth +/-1\n"
-                " DELETE    PANIC — all off\n"
-                " END       exit");
-
             SectionHeader("PROTECTION");
             if (ImGui::Checkbox("Stream proof  (OBS / Game Bar / ShadowPlay)", &g_streamProof))
                 g_overlay.applyStreamProof(g_streamProof);
@@ -436,53 +410,12 @@ static void drawMenu() {
 }
 
 // ── hotkeys ───────────────────────────────────────────────────────────────────
-// INSERT  = menu open/close
-// END     = exit
-// DELETE  = panic — zero every feature instantly
-// F1      = toggle aimbot
-// F2      = toggle player boxes
-// F3      = toggle skeleton
-// F4      = toggle radar
-// F5      = toggle loot ESP
-// F6      = toggle speed hack
-// NUMPAD+ = aimbot smooth +1 (less snappy)
-// NUMPAD- = aimbot smooth -1 (more snappy)
+// HOME = menu open/close
+// END  = exit
 static void hotkeyThread() {
     while (g_running) {
-        if (GetAsyncKeyState(VK_INSERT) & 1) g_menuOpen = !g_menuOpen;
-        if (GetAsyncKeyState(VK_END)    & 1) g_running  = false;
-
-        // panic — wipe every feature in one keypress
-        if (GetAsyncKeyState(VK_DELETE) & 1) {
-            g_cfg.aim.enabled         = false;
-            g_cfg.esp.playerBoxes     = false;
-            g_cfg.esp.playerSkeleton  = false;
-            g_cfg.esp.playerHealth    = false;
-            g_cfg.esp.playerName      = false;
-            g_cfg.esp.playerDist      = false;
-            g_cfg.esp.lootESP         = false;
-            g_cfg.esp.radarESP        = false;
-            g_cfg.feat.speedHack      = false;
-            g_cfg.feat.noclip         = false;
-            g_cfg.feat.rapidFire      = false;
-            g_cfg.feat.unlimAmmo      = false;
-            g_cfg.feat.unlimDura      = false;
-            g_cfg.feat.unlimMoney     = false;
-        }
-
-        if (GetAsyncKeyState(VK_F1) & 1) g_cfg.aim.enabled        = !g_cfg.aim.enabled;
-        if (GetAsyncKeyState(VK_F2) & 1) g_cfg.esp.playerBoxes    = !g_cfg.esp.playerBoxes;
-        if (GetAsyncKeyState(VK_F3) & 1) g_cfg.esp.playerSkeleton = !g_cfg.esp.playerSkeleton;
-        if (GetAsyncKeyState(VK_F4) & 1) g_cfg.esp.radarESP       = !g_cfg.esp.radarESP;
-        if (GetAsyncKeyState(VK_F5) & 1) g_cfg.esp.lootESP        = !g_cfg.esp.lootESP;
-        if (GetAsyncKeyState(VK_F6) & 1) g_cfg.feat.speedHack     = !g_cfg.feat.speedHack;
-
-        // NUMPAD +/- adjust aimbot smoothness (clamp 1..20)
-        if (GetAsyncKeyState(VK_ADD)      & 1)
-            g_cfg.aim.smooth = std::min(20.f, g_cfg.aim.smooth + 1.f);
-        if (GetAsyncKeyState(VK_SUBTRACT) & 1)
-            g_cfg.aim.smooth = std::max(1.f,  g_cfg.aim.smooth - 1.f);
-
+        if (GetAsyncKeyState(VK_HOME) & 1) g_menuOpen = !g_menuOpen;
+        if (GetAsyncKeyState(VK_END)  & 1) g_running  = false;
         rsleep(10);
     }
 }
