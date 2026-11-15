@@ -88,25 +88,44 @@
 
   <div id="modalOverlay" class="modal-overlay" style="display:none">
     <form id="charForm" class="modal">
+
+      <!-- الخطوة ٠: الجنس + النمط، بنفس أسلوب مواقع إنشاء الشخصيات (تابات جنس فوق + كرتين نمط) -->
+      <div id="step0" class="wizard-step">
+        <h3>شخصية جديدة</h3>
+        <div class="gender-toggle" id="genderToggle">
+          <button type="button" data-value="female" class="gtab active">أنثى</button>
+          <button type="button" data-value="male" class="gtab">ذكر</button>
+          <button type="button" data-value="femboy" class="gtab">فيمبوي</button>
+          <button type="button" data-value="tomboy" class="gtab">تومبوي</button>
+          <button type="button" data-value="futa" class="gtab">فوتا</button>
+        </div>
+
+        <div class="style-cards" id="kindCards">
+          <button type="button" class="style-card active" data-value="realistic">
+            <div class="style-card-preview realistic-preview">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="9" r="3.2"/><path d="M4 20c0-3.5 3.5-6 8-6s8 2.5 8 6"/></svg>
+            </div>
+            <span>واقعي</span>
+          </button>
+          <button type="button" class="style-card" data-value="anime">
+            <div class="style-card-preview anime-preview">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><circle cx="12" cy="9" r="3.2"/><path d="M4 20c0-3.5 3.5-6 8-6s8 2.5 8 6"/></svg>
+            </div>
+            <span>أنمي</span>
+          </button>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelCharBtn">إلغاء</button>
+          <button type="button" id="step0NextBtn" class="primary">التالي ‹</button>
+        </div>
+      </div>
+
+      <!-- الخطوة ١: التفاصيل الكاملة -->
+      <div id="step1" class="wizard-step" style="display:none">
       <h3 id="charFormTitle">شخصية جديدة</h3>
+      <button type="button" id="step1BackBtn" class="back-to-step0">› رجوع لاختيار الجنس/النمط</button>
       <label>الاسم<input id="f_name" required /></label>
-
-      <label>النمط
-        <select id="f_kind">
-          <option value="anime">أنمي</option>
-          <option value="realistic">حقيقية</option>
-        </select>
-      </label>
-
-      <label>الجنس
-        <select id="f_gender">
-          <option value="male">ولد</option>
-          <option value="female">بنت</option>
-          <option value="femboy">فيمبوي (ولد بمظهر أنثوي)</option>
-          <option value="tomboy">تومبوي (بنت بمظهر ذكوري)</option>
-          <option value="futa">فوتا (بنت وعندها قضيب)</option>
-        </select>
-      </label>
 
       <fieldset class="attrs-fieldset">
         <legend>السمات الجسدية</legend>
@@ -188,9 +207,10 @@
       <label>الشخصية<textarea id="f_personality" required placeholder="الطابع، طريقة الكلام، الصفات"></textarea></label>
       <label>السياق/القصة (اختياري)<textarea id="f_scenario"></textarea></label>
       <div class="modal-actions">
-        <button type="button" id="cancelCharBtn">إلغاء</button>
+        <button type="button" id="cancelCharBtn2">إلغاء</button>
         <button type="submit" class="primary" id="charFormSubmitBtn">إنشاء</button>
       </div>
+      </div><!-- /step1 -->
     </form>
   </div>
 

@@ -145,8 +145,36 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach((btn) => {
 // ---- نموذج إنشاء/تعديل شخصية ----
 const modalOverlay = document.getElementById('modalOverlay');
 let editingCharacterId = null; // null = إنشاء جديد، غير ذلك = تعديل
+let selectedGender = 'female';
+let selectedKind = 'realistic';
 
-document.getElementById('cancelCharBtn').onclick = () => (modalOverlay.style.display = 'none');
+function closeCharModal() {
+  modalOverlay.style.display = 'none';
+}
+document.getElementById('cancelCharBtn').onclick = closeCharModal;
+document.getElementById('cancelCharBtn2').onclick = closeCharModal;
+
+function showStep(n) {
+  document.getElementById('step0').style.display = n === 0 ? 'flex' : 'none';
+  document.getElementById('step1').style.display = n === 1 ? 'flex' : 'none';
+}
+
+// ---- تابات الجنس + كروت النمط (خطوة ٠) ----
+document.getElementById('genderToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('.gtab');
+  if (!btn) return;
+  selectedGender = btn.dataset.value;
+  document.querySelectorAll('.gtab').forEach((b) => b.classList.toggle('active', b === btn));
+  updatePenisFieldVisibility();
+});
+document.getElementById('kindCards').addEventListener('click', (e) => {
+  const btn = e.target.closest('.style-card');
+  if (!btn) return;
+  selectedKind = btn.dataset.value;
+  document.querySelectorAll('.style-card').forEach((b) => b.classList.toggle('active', b === btn));
+});
+document.getElementById('step0NextBtn').onclick = () => showStep(1);
+document.getElementById('step1BackBtn').onclick = () => showStep(0);
 
 // حقول select فيها خيار "أخرى..." تكشف input نصي بجانبها
 function wireOtherSelect(selectId, otherId) {
@@ -208,10 +236,8 @@ function clearAllChoices() {
 
 const HAS_PENIS_GENDERS = ['male', 'femboy', 'futa'];
 function updatePenisFieldVisibility() {
-  const show = HAS_PENIS_GENDERS.includes(document.getElementById('f_gender').value);
-  document.getElementById('penisSizeLabel').style.display = show ? 'flex' : 'none';
+  document.getElementById('penisSizeLabel').style.display = HAS_PENIS_GENDERS.includes(selectedGender) ? 'flex' : 'none';
 }
-document.getElementById('f_gender').onchange = updatePenisFieldVisibility;
 
 function setSelectWithOther(selectId, otherId, value) {
   const sel = document.getElementById(selectId);
@@ -228,6 +254,15 @@ function setSelectWithOther(selectId, otherId, value) {
   }
 }
 
+function setGenderTab(value) {
+  selectedGender = value;
+  document.querySelectorAll('.gtab').forEach((b) => b.classList.toggle('active', b.dataset.value === value));
+}
+function setKindCard(value) {
+  selectedKind = value;
+  document.querySelectorAll('.style-card').forEach((b) => b.classList.toggle('active', b.dataset.value === value));
+}
+
 function openCharForm(character) {
   editingCharacterId = character ? character.id : null;
   document.getElementById('charFormTitle').textContent = character ? `تعديل ${character.name}` : 'شخصية جديدة';
@@ -235,10 +270,11 @@ function openCharForm(character) {
   document.getElementById('charForm').reset();
   clearAllChoices();
 
+  setGenderTab(character ? character.gender : 'female');
+  setKindCard(character ? character.kind : 'realistic');
+
   if (character) {
     document.getElementById('f_name').value = character.name;
-    document.getElementById('f_kind').value = character.kind;
-    document.getElementById('f_gender').value = character.gender;
     setSelectWithOther('f_role', 'f_role_other', character.role);
     setSelectWithOther('f_voice', 'f_voice_other', character.voice);
     setSelectWithOther('f_relationship', 'f_relationship_other', character.relationship_type);
@@ -253,6 +289,7 @@ function openCharForm(character) {
     setChoiceValue('penisSize', character.penis_size);
   }
   updatePenisFieldVisibility();
+  showStep(character ? 1 : 0); // تعديل يدخل مباشرة للتفاصيل، إنشاء يبدأ من اختيار الجنس/النمط
   modalOverlay.style.display = 'flex';
 }
 
@@ -263,8 +300,8 @@ document.getElementById('charForm').onsubmit = async (e) => {
   e.preventDefault();
   const payload = {
     name: document.getElementById('f_name').value.trim(),
-    kind: document.getElementById('f_kind').value,
-    gender: document.getElementById('f_gender').value,
+    kind: selectedKind,
+    gender: selectedGender,
     role: selectValue('f_role', 'f_role_other'),
     voice: selectValue('f_voice', 'f_voice_other'),
     relationshipType: selectValue('f_relationship', 'f_relationship_other'),

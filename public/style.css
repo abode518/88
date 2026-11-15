@@ -201,3 +201,28 @@ button.danger { color: #ff6b6b; }
 .age-gate { text-align: center; }
 .age-gate p { color: var(--muted); font-size: 14px; line-height: 1.6; }
 .age-gate .modal-actions { justify-content: center; flex-wrap: wrap; }
+
+/* ---- معالج الشخصية خطوة ٠: الجنس + النمط ---- */
+.wizard-step { display: flex; flex-direction: column; gap: 14px; }
+.gender-toggle { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.gender-toggle .gtab {
+  flex-shrink: 0; padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border);
+  background: #1e1e28; color: var(--muted); font-size: 13px; font-weight: 600;
+}
+.gender-toggle .gtab.active { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff; border-color: transparent; }
+
+.style-cards { display: flex; gap: 10px; }
+.style-card {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 18px 10px; border-radius: 14px; border: 2px solid var(--border); background: #1a1a24;
+}
+.style-card.active { border-color: var(--accent); background: #22182a; }
+.style-card-preview {
+  width: 100%; aspect-ratio: 3/4; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.7);
+}
+.style-card-preview.realistic-preview { background: linear-gradient(160deg, #caa47a, #6b4a38); }
+.style-card-preview.anime-preview { background: linear-gradient(160deg, var(--accent), var(--accent2)); }
+.style-card span { font-size: 13px; font-weight: 600; }
+
+.back-to-step0 { align-self: flex-start; background: none; border: none; color: var(--accent); font-size: 13px; padding: 0; margin-top: -6px; }
