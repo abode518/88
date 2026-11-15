@@ -8,16 +8,15 @@
 // Extended offsets for misc features
 // FILL: derive from il2cpp dump
 namespace OffExt {
-    inline constexpr uintptr_t LocalPlayer      = 0x0;  // static ptr to local PlayerController
-    inline constexpr uintptr_t Money            = 0x0;  // PlayerEconomy.money  (int/float)
-    inline constexpr uintptr_t MoveSpeed        = 0x0;  // CharacterMovement.moveSpeed (float)
-    inline constexpr uintptr_t JumpHeight       = 0x0;  // CharacterMovement.jumpHeight
-    inline constexpr uintptr_t CollisionEnabled = 0x0;  // CharacterController.enabled (bool) — false = noclip
-    inline constexpr uintptr_t GravityScale     = 0x0;  // Rigidbody.useGravity (bool) — false = fly
-    inline constexpr uintptr_t FireRate         = 0x0;  // WeaponController.fireRate (float)
-    inline constexpr uintptr_t Ammo             = 0x0;  // WeaponController.currentAmmo (int)
-    inline constexpr uintptr_t AmmoReserve      = 0x0;  // WeaponController.reserveAmmo (int)
-    inline constexpr uintptr_t Durability       = 0x0;  // ItemBase.durability (float)
+    inline uintptr_t LocalPlayer      = 0x0;  // resolved by scanner
+    inline uintptr_t Money            = 0x0;
+    inline uintptr_t MoveSpeed        = 0x0;
+    inline uintptr_t JumpHeight       = 0x0;
+    inline uintptr_t CollisionEnabled = 0x0;
+    inline uintptr_t FireRate         = 0x0;
+    inline uintptr_t Ammo             = 0x0;
+    inline uintptr_t AmmoReserve      = 0x0;
+    inline uintptr_t Durability       = 0x0;
 }
 
 class Features {

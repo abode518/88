@@ -194,7 +194,8 @@ public:
         // loot
         if (cfg.lootESP) {
             uintptr_t ll = mem.read<uintptr_t>(mem.base + Offsets::LootList);
-            if (!ll) return;
+            if (!ll) goto done_loot;
+            {
             int lc = std::min(mem.read<int32_t>(ll + 0x18), 256);
             uintptr_t li = mem.read<uintptr_t>(ll + 0x10);
             for (int i = 0; i < lc; i++) {
@@ -212,6 +213,8 @@ public:
                 ld.name = np ? mem.readString(np) : "item";
                 loot.push_back(ld);
             }
+            } // end inner block
         }
+        done_loot:;
     }
 };

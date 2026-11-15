@@ -14,11 +14,11 @@ class Aimbot {
 public:
     struct Config {
         bool  enabled      = false;
-        bool  holdKey      = true;   // false = toggle
+        bool  holdKey      = true;
         int   key          = VK_RBUTTON;
-        float fovPx        = 150.f;  // screen-pixel radius
-        float smooth       = 6.f;    // 1=instant, higher=slower
-        int   targetBone   = Offsets::BoneHead; // 7
+        float fovPx        = 150.f;
+        float smooth       = 6.f;
+        int   targetBone   = Offsets::BoneHead; // 10 = Head
         bool  recoilComp   = true;
         bool  visCheck     = false;  // skip if no LOS (requires vis flag from ESP)
         bool  teamCheck    = true;
@@ -35,13 +35,20 @@ public:
 
         for (const auto& p : players) {
             if (cfg.visCheck && !p.visible) continue;
-            float fov = calcFov(center, p.scrHead);
+            // use the configured bone if valid, fall back to scrHead
+            Vec2 aimPt = (p.boneValid[cfg.targetBone])
+                       ? p.boneScr[cfg.targetBone]
+                       : p.scrHead;
+            float fov = calcFov(center, aimPt);
             if (fov < bestFov) { bestFov = fov; best = &p; }
         }
 
         if (!best) return;
 
-        Vec2 delta = { best->scrHead.x - center.x, best->scrHead.y - center.y };
+        Vec2 aimPt = (best->boneValid[cfg.targetBone])
+                   ? best->boneScr[cfg.targetBone]
+                   : best->scrHead;
+        Vec2 delta = { aimPt.x - center.x, aimPt.y - center.y };
         // smooth
         delta.x /= cfg.smooth;
         delta.y /= cfg.smooth;

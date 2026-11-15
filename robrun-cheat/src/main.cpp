@@ -180,114 +180,241 @@ static void drawESP(ImDrawList* dl) {
             g_aim.cfg.fovPx, 0x33FFFFFF, 64);
 }
 
-// ── ImGui menu ────────────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────────
+static void Badge(const char* label, bool on) {
+    if (on) ImGui::TextColored({0.f,0.9f,0.4f,1.f}, "[ON]  %s", label);
+    else    ImGui::TextColored({0.5f,0.5f,0.5f,1.f}, "[--]  %s", label);
+}
+static void SectionHeader(const char* title) {
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.f,0.8f,1.f,0.6f});
+    ImGui::TextUnformatted(title);
+    ImGui::PopStyleColor();
+    ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4{0.f,0.6f,0.8f,0.3f});
+    ImGui::Separator();
+    ImGui::PopStyleColor();
+    ImGui::Spacing();
+}
+
+// ── menu ──────────────────────────────────────────────────────────────────────
 static void drawMenu() {
     if (!g_menuOpen) return;
 
-    // dark style
-    ImGui::PushStyleColor(ImGuiCol_WindowBg,     {0.08f,0.08f,0.12f,0.92f});
-    ImGui::PushStyleColor(ImGuiCol_Header,       {0.15f,0.15f,0.25f,1.f});
-    ImGui::PushStyleColor(ImGuiCol_CheckMark,    {0.0f, 0.8f, 1.0f, 1.f});
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab,   {0.0f, 0.8f, 1.0f, 1.f});
-    ImGui::PushStyleColor(ImGuiCol_FrameBg,      {0.1f, 0.1f, 0.18f,1.f});
-    ImGui::PushStyleColor(ImGuiCol_Button,       {0.1f, 0.1f, 0.18f,1.f});
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.0f, 0.4f, 0.5f, 1.f});
+    // ── style ─────────────────────────────────────────────────────────────────
+    auto& st = ImGui::GetStyle();
+    st.WindowRounding   = 6.f;
+    st.FrameRounding    = 3.f;
+    st.ItemSpacing      = {8.f, 6.f};
+    st.WindowPadding    = {14.f, 12.f};
+    st.FramePadding     = {6.f, 3.f};
+    st.TabRounding      = 4.f;
+    st.ScrollbarRounding= 3.f;
 
-    ImGui::SetNextWindowSize({360, 480}, ImGuiCond_Once);
-    ImGui::SetNextWindowBgAlpha(0.0f); // handled by PushStyleColor above
-    ImGui::Begin("##robrun", nullptr,
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,         {0.05f,0.05f,0.09f,0.96f});
+    ImGui::PushStyleColor(ImGuiCol_Border,            {0.0f, 0.5f, 0.7f, 0.4f});
+    ImGui::PushStyleColor(ImGuiCol_TitleBg,           {0.04f,0.04f,0.08f,1.f});
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive,     {0.04f,0.04f,0.08f,1.f});
+    ImGui::PushStyleColor(ImGuiCol_Tab,               {0.08f,0.08f,0.14f,1.f});
+    ImGui::PushStyleColor(ImGuiCol_TabActive,         {0.0f, 0.45f,0.65f,1.f});
+    ImGui::PushStyleColor(ImGuiCol_TabHovered,        {0.0f, 0.35f,0.5f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_Header,            {0.0f, 0.3f, 0.45f,0.5f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered,     {0.0f, 0.4f, 0.6f, 0.6f});
+    ImGui::PushStyleColor(ImGuiCol_CheckMark,         {0.0f, 0.9f, 0.5f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab,        {0.0f, 0.7f, 1.0f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive,  {0.0f, 0.9f, 1.0f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_FrameBg,           {0.09f,0.09f,0.15f,1.f});
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,    {0.1f, 0.1f, 0.2f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_Button,            {0.09f,0.09f,0.16f,1.f});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,     {0.0f, 0.4f, 0.6f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,      {0.0f, 0.6f, 0.8f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_PopupBg,           {0.06f,0.06f,0.10f,0.98f});
+    constexpr int STYLE_COLORS = 18;
 
-    ImGui::TextColored({0.f,0.8f,1.f,1.f}, "  ROB RUN");
-    ImGui::SameLine(0, 20);
-    ImGui::TextColored({0.4f,0.4f,0.4f,1.f},
-        "players:%d  INSERT=hide  END=exit", (int)g_esp.players.size());
+    // ── window ────────────────────────────────────────────────────────────────
+    ImGui::SetNextWindowSize({370.f, 490.f}, ImGuiCond_Once);
+    ImGui::Begin("##rr", nullptr,
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoScrollbar);
+
+    // ── header bar ───────────────────────────────────────────────────────────
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.0f,0.3f,0.45f,0.15f});
+    ImGui::BeginChild("##hdr", {0, 44}, false, ImGuiWindowFlags_NoScrollbar);
+    ImGui::SetCursorPos({10, 6});
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.f,0.85f,1.f,1.f});
+    ImGui::Text("ROB RUN CHEAT");
+    ImGui::PopStyleColor();
+    ImGui::SameLine(0, 14);
+    // status dot
+    if (g_offsetsOk) ImGui::TextColored({0.f,0.9f,0.4f,1.f}, "●");
+    else             ImGui::TextColored({1.f,0.4f,0.2f,1.f}, "●");
+    ImGui::SameLine(0, 4);
+    ImGui::TextColored({0.5f,0.5f,0.5f,1.f}, "%s", g_statusMsg);
+
+    // live COP / CRIM count on right side
+    int cops=0, crims=0;
+    for (auto& p : g_esp.players) { if(p.team==0) cops++; else crims++; }
+    char buf[48]; snprintf(buf,sizeof(buf),"COP %d  CRIM %d  |  INSERT  END",cops,crims);
+    float tw = ImGui::CalcTextSize(buf).x;
+    ImGui::SetCursorPos({ImGui::GetWindowWidth()-tw-10, 6});
+    ImGui::TextColored({0.4f,0.4f,0.4f,1.f}, "COP ");
+    ImGui::SameLine(0,0); ImGui::TextColored({0.5f,0.8f,1.f,1.f},"%d",cops);
+    ImGui::SameLine(0,6); ImGui::TextColored({0.4f,0.4f,0.4f,1.f},"CRIM ");
+    ImGui::SameLine(0,0); ImGui::TextColored({1.f,0.5f,0.5f,1.f},"%d",crims);
+    ImGui::SameLine(0,6); ImGui::TextColored({0.3f,0.3f,0.3f,1.f},"| INSERT  END");
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
     if (!g_offsetsOk)
-        ImGui::TextColored({1.f,0.4f,0.2f,1.f}, "⚠ offsets not resolved — patterns need update after patch");
-    else
-        ImGui::TextColored({0.3f,0.9f,0.3f,1.f}, "● %s", g_statusMsg);
-    ImGui::Separator();
+        ImGui::TextColored({1.f,0.4f,0.2f,1.f},
+            "  ⚠  patterns not resolved — update scanner.h after this patch");
+    ImGui::Spacing();
 
-    if (ImGui::BeginTabBar("tabs")) {
+    // ── tabs ──────────────────────────────────────────────────────────────────
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.85f,0.85f,0.85f,1.f});
+    if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)) {
 
-        // ── ESP tab ────────────────────────────────────────────────────────
-        if (ImGui::BeginTabItem("ESP")) {
-            ImGui::TextColored({0.f,0.8f,1.f,1.f}, "Players");
-            ImGui::Checkbox("Boxes",           &g_cfg.esp.playerBoxes);
-            ImGui::Checkbox("Health bars",     &g_cfg.esp.playerHealth);
-            ImGui::Checkbox("Names",           &g_cfg.esp.playerName);
-            ImGui::Checkbox("Distance",        &g_cfg.esp.playerDist);
-            ImGui::Checkbox("Team check (skip same)", &g_cfg.esp.teamCheck);
-            ImGui::SliderFloat("Max dist (m)", &g_cfg.esp.maxDist, 50.f, 600.f, "%.0f");
-            ImGui::Separator();
-            ImGui::TextColored({0.f,0.8f,1.f,1.f}, "World");
-            ImGui::Checkbox("Loot ESP",        &g_cfg.esp.lootESP);
-            ImGui::Checkbox("Radar",           &g_cfg.esp.radarESP);
-            ImGui::Separator();
-            // live team count
-            int cops = 0, crims = 0;
-            for (auto& p : g_esp.players) { if (p.team==0) cops++; else crims++; }
-            ImGui::TextColored({0.6f,0.9f,1.f,1.f}, "[COP]  %d", cops);
-            ImGui::SameLine(0,16);
-            ImGui::TextColored({1.f,0.6f,0.6f,1.f}, "[CRIM] %d", crims);
+        // ════════════════ ESP ════════════════════════════════════════════════
+        if (ImGui::BeginTabItem("  ESP  ")) {
+            SectionHeader("PLAYERS");
+            ImGui::Columns(2, nullptr, false);
+            ImGui::Checkbox("Boxes",     &g_cfg.esp.playerBoxes);
+            ImGui::Checkbox("Skeleton",  &g_cfg.esp.playerSkeleton);
+            ImGui::Checkbox("Health",    &g_cfg.esp.playerHealth);
+            ImGui::NextColumn();
+            ImGui::Checkbox("Names",     &g_cfg.esp.playerName);
+            ImGui::Checkbox("Distance",  &g_cfg.esp.playerDist);
+            ImGui::Checkbox("Skip team", &g_cfg.esp.teamCheck);
+            ImGui::Columns(1);
+            ImGui::Spacing();
+            ImGui::SliderFloat("Max distance", &g_cfg.esp.maxDist, 50.f, 600.f, "%.0f m");
+
+            SectionHeader("WORLD");
+            ImGui::Columns(2, nullptr, false);
+            ImGui::Checkbox("Loot ESP",  &g_cfg.esp.lootESP);
+            ImGui::NextColumn();
+            ImGui::Checkbox("Radar",     &g_cfg.esp.radarESP);
+            ImGui::Columns(1);
+            if (g_cfg.esp.radarESP)
+                ImGui::SliderFloat("Radar scale", &g_cfg.esp.radarScale, 0.1f, 2.f, "%.1f");
+
+            SectionHeader("OVERVIEW");
+            // mini status row
+            Badge("Boxes",    g_cfg.esp.playerBoxes);
+            ImGui::SameLine(120);
+            Badge("Skeleton", g_cfg.esp.playerSkeleton);
+            Badge("Loot",     g_cfg.esp.lootESP);
+            ImGui::SameLine(120);
+            Badge("Radar",    g_cfg.esp.radarESP);
+
             ImGui::EndTabItem();
         }
 
-        // ── Aimbot tab ─────────────────────────────────────────────────────
-        if (ImGui::BeginTabItem("Aimbot")) {
-            ImGui::Checkbox("Enable (RMB hold)", &g_cfg.aim.enabled);
-            ImGui::Checkbox("Recoil control",    &g_cfg.aim.recoilComp);
-            ImGui::Checkbox("Vis check",         &g_cfg.aim.visCheck);
-            ImGui::SliderFloat("FOV (px)",        &g_cfg.aim.fovPx,  20.f, 500.f, "%.0f");
-            ImGui::SliderFloat("Smooth",          &g_cfg.aim.smooth,  1.f,  20.f, "%.1f");
-            const char* bones[] = {"Hips","Chest","Head"};
-            int boneIdx = (g_cfg.aim.targetBone == Offsets::BoneHead) ? 2 :
+        // ════════════════ AIMBOT ═════════════════════════════════════════════
+        if (ImGui::BeginTabItem("  AIM  ")) {
+            SectionHeader("AIMBOT");
+            ImGui::Checkbox("Enable  (hold RMB)", &g_cfg.aim.enabled);
+            ImGui::Spacing();
+            ImGui::BeginDisabled(!g_cfg.aim.enabled);
+            ImGui::SliderFloat("FOV radius", &g_cfg.aim.fovPx,  20.f, 500.f, "%.0f px");
+            ImGui::SliderFloat("Smoothness", &g_cfg.aim.smooth,  1.f,  20.f, "%.1f");
+            const char* bones[] = {"Hips (0)","Chest (8)","Head (10)"};
+            int boneIdx = (g_cfg.aim.targetBone == Offsets::BoneHead)  ? 2 :
                           (g_cfg.aim.targetBone == Offsets::BoneChest) ? 1 : 0;
-            if (ImGui::Combo("Bone", &boneIdx, bones, 3)) {
-                g_cfg.aim.targetBone = (boneIdx==2) ? Offsets::BoneHead :
+            if (ImGui::Combo("Target bone", &boneIdx, bones, 3))
+                g_cfg.aim.targetBone = (boneIdx==2) ? Offsets::BoneHead  :
                                        (boneIdx==1) ? Offsets::BoneChest : Offsets::BoneHips;
-            }
+            ImGui::EndDisabled();
+
+            SectionHeader("WEAPON");
+            ImGui::Checkbox("No recoil / no spread", &g_cfg.aim.recoilComp);
+            ImGui::Checkbox("Visibility check",      &g_cfg.aim.visCheck);
+
+            SectionHeader("OVERVIEW");
+            Badge("Aimbot",        g_cfg.aim.enabled);
+            ImGui::SameLine(120);
+            Badge("No recoil",     g_cfg.aim.recoilComp);
+            Badge("Vis check",     g_cfg.aim.visCheck);
+
             ImGui::EndTabItem();
         }
 
-        // ── Misc tab ───────────────────────────────────────────────────────
-        if (ImGui::BeginTabItem("Misc")) {
+        // ════════════════ MISC ═══════════════════════════════════════════════
+        if (ImGui::BeginTabItem("  MISC  ")) {
+            SectionHeader("ECONOMY");
             ImGui::Checkbox("Unlimited money", &g_cfg.feat.unlimMoney);
-            if (g_cfg.feat.unlimMoney)
-                ImGui::SliderInt("Amount", &g_cfg.feat.moneyAmount, 1000, 9999999);
-            ImGui::Separator();
-            ImGui::Checkbox("Speed hack",      &g_cfg.feat.speedHack);
-            if (g_cfg.feat.speedHack)
-                ImGui::SliderFloat("Speed mult", &g_cfg.feat.speedMult, 1.f, 5.f, "%.1fx");
-            ImGui::Checkbox("Noclip",          &g_cfg.feat.noclip);
-            ImGui::Separator();
-            ImGui::Checkbox("Rapid fire",      &g_cfg.feat.rapidFire);
-            ImGui::Checkbox("Unlimited ammo",  &g_cfg.feat.unlimAmmo);
-            ImGui::Checkbox("Unlimited dura",  &g_cfg.feat.unlimDura);
+            if (g_cfg.feat.unlimMoney) {
+                ImGui::PushItemWidth(160);
+                ImGui::SliderInt("Amount", &g_cfg.feat.moneyAmount, 10000, 9999999, "$%d");
+                ImGui::PopItemWidth();
+            }
+
+            SectionHeader("MOVEMENT");
+            ImGui::Checkbox("Speed hack", &g_cfg.feat.speedHack);
+            if (g_cfg.feat.speedHack) {
+                ImGui::PushItemWidth(160);
+                ImGui::SliderFloat("Multiplier", &g_cfg.feat.speedMult, 1.f, 5.f, "x%.1f");
+                ImGui::PopItemWidth();
+            }
+            ImGui::Checkbox("Noclip", &g_cfg.feat.noclip);
+
+            SectionHeader("COMBAT");
+            ImGui::Columns(2, nullptr, false);
+            ImGui::Checkbox("Rapid fire",    &g_cfg.feat.rapidFire);
+            ImGui::Checkbox("Unlim ammo",    &g_cfg.feat.unlimAmmo);
+            ImGui::NextColumn();
+            ImGui::Checkbox("Unlim durabil", &g_cfg.feat.unlimDura);
+            ImGui::Columns(1);
+
+            SectionHeader("OVERVIEW");
+            Badge("Money",   g_cfg.feat.unlimMoney);
+            ImGui::SameLine(120);
+            Badge("Speed",   g_cfg.feat.speedHack);
+            Badge("Noclip",  g_cfg.feat.noclip);
+            ImGui::SameLine(120);
+            Badge("Rap.Fire",g_cfg.feat.rapidFire);
+
             ImGui::EndTabItem();
         }
 
-        // ── Config tab ─────────────────────────────────────────────────────
-        if (ImGui::BeginTabItem("Config")) {
-            if (ImGui::Button("Save")) { g_cfg.magic=0xDEADC0DE; g_cfgMgr.save(g_cfg); }
-            ImGui::SameLine();
-            if (ImGui::Button("Load")) g_cfgMgr.load(g_cfg);
-            ImGui::Separator();
-            // stream proof toggle
-            if (ImGui::Checkbox("Stream proof (hide from OBS/capture)", &g_streamProof))
+        // ════════════════ SETTINGS ═══════════════════════════════════════════
+        if (ImGui::BeginTabItem("  SET  ")) {
+            SectionHeader("PROTECTION");
+            if (ImGui::Checkbox("Stream proof  (OBS / Game Bar / ShadowPlay)", &g_streamProof))
                 g_overlay.applyStreamProof(g_streamProof);
             ImGui::TextColored({0.4f,0.4f,0.4f,1.f},
-                "invisible to OBS, Game Bar, screenshots");
-            ImGui::Separator();
-            ImGui::TextColored({0.4f,0.4f,0.4f,1.f}, "Config: %%APPDATA%%\\Microsoft\\config.bin");
+                "   overlay invisible to any screen capture");
+
+            SectionHeader("CONFIG");
+            ImGui::PushStyleColor(ImGuiCol_Button,        {0.0f,0.3f,0.45f,0.7f});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.0f,0.5f,0.7f, 0.9f});
+            if (ImGui::Button("  Save config  ", {120,0})) {
+                g_cfg.magic = 0xDEADC0DE; g_cfgMgr.save(g_cfg);
+            }
+            ImGui::SameLine(0,8);
+            if (ImGui::Button("  Load config  ", {120,0})) {
+                g_cfgMgr.load(g_cfg);
+            }
+            ImGui::PopStyleColor(2);
+            ImGui::Spacing();
+            ImGui::TextColored({0.3f,0.3f,0.3f,1.f},
+                "%%APPDATA%%\\Microsoft\\config.bin");
+
+            SectionHeader("OVERVIEW");
+            Badge("Stream proof", g_streamProof);
+            ImGui::SameLine(140);
+            ImGui::TextColored({0.3f,0.3f,0.3f,1.f},
+                "offsets: %s", g_offsetsOk ? "resolved" : "MISSING");
+
             ImGui::EndTabItem();
         }
 
         ImGui::EndTabBar();
     }
+    ImGui::PopStyleColor(); // tab text
 
     ImGui::End();
-    ImGui::PopStyleColor(7);
+    ImGui::PopStyleColor(STYLE_COLORS);
 }
 
 // ── hotkeys ───────────────────────────────────────────────────────────────────
