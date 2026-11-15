@@ -116,101 +116,130 @@
         </div>
 
         <div class="modal-actions">
-          <button type="button" id="cancelCharBtn">إلغاء</button>
+          <button type="button" class="modal-cancel">إلغاء</button>
           <button type="button" id="step0NextBtn" class="primary">التالي ‹</button>
         </div>
       </div>
 
-      <!-- الخطوة ١: التفاصيل الكاملة -->
-      <div id="step1" class="wizard-step" style="display:none">
-      <h3 id="charFormTitle">شخصية جديدة</h3>
-      <button type="button" id="step1BackBtn" class="back-to-step0">› رجوع لاختيار الجنس/النمط</button>
-      <label>الاسم<input id="f_name" required /></label>
-
-      <fieldset class="attrs-fieldset">
-        <legend>السمات الجسدية</legend>
-
-        <label>لون الشعر
-          <div class="swatch-group" data-field="hairColor" data-colors='[
-            ["أسود","#1a1a1a"],["بني","#6b4423"],["أشقر","#d4af37"],["أحمر","#b22222"],
-            ["وردي","#ff9ecb"],["أبيض","#f5f5f5"],["أزرق","#3b6ea5"],["بنفسجي","#8e44ad"]
-          ]'></div>
-        </label>
-
-        <label>قصة الشعر
-          <div class="pill-group" data-field="hairstyle" data-options='["طويل","قصير","مموج","مجعد","ذيل حصان","ضفائر","منكوش"]'></div>
-        </label>
-
-        <label>لون العين
-          <div class="swatch-group" data-field="eyeColor" data-colors='[
-            ["بني","#6b4423"],["عسلي","#c68e3f"],["أزرق","#3b6ea5"],["أخضر","#4a7c59"],
-            ["رمادي","#8a8a99"],["بنفسجي","#8e44ad"],["أحمر","#b22222"],["ذهبي","#d4af37"]
-          ]'></div>
-        </label>
-
-        <label>حجم الصدر
-          <div class="pill-group size-group" data-field="breastSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
-        </label>
-
-        <label>حجم الطيز
-          <div class="pill-group size-group" data-field="buttSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
-        </label>
-
-        <label id="penisSizeLabel">حجم القضيب
-          <div class="pill-group size-group" data-field="penisSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
-        </label>
-      </fieldset>
-
-      <label>الدور
-        <select id="f_role">
-          <option value="حبيب/حبيبة">حبيب/حبيبة</option>
-          <option value="صديق/صديقة">صديق/صديقة</option>
-          <option value="زوج/زوجة">زوج/زوجة</option>
-          <option value="معلم/معلمة">معلم/معلمة</option>
-          <option value="خادم/خادمة">خادم/خادمة</option>
-          <option value="سيد/سيدة">سيد/سيدة</option>
-          <option value="منافس/منافسة">منافس/منافسة</option>
-          <option value="غريب/غريبة">غريب/غريبة</option>
-          <option value="other">أخرى...</option>
-        </select>
-        <input id="f_role_other" style="display:none" placeholder="اكتب الدور" />
-      </label>
-
-      <label>الصوت
-        <select id="f_voice">
-          <option value="ناعم وهادئ">ناعم وهادئ</option>
-          <option value="أنثوي رقيق">أنثوي رقيق</option>
-          <option value="رجولي عميق">رجولي عميق</option>
-          <option value="طفولي عالي النبرة">طفولي عالي النبرة</option>
-          <option value="حيوي ومتحمس">حيوي ومتحمس</option>
-          <option value="بارد وجاد">بارد وجاد</option>
-          <option value="مثير وغامض">مثير وغامض</option>
-          <option value="other">أخرى...</option>
-        </select>
-        <input id="f_voice_other" style="display:none" placeholder="اكتب نمط الصوت" />
-      </label>
-
-      <label>نوع العلاقة
-        <select id="f_relationship">
-          <option value="رومانسية">رومانسية</option>
-          <option value="صداقة">صداقة</option>
-          <option value="زواج">زواج</option>
-          <option value="عائلية">عائلية</option>
-          <option value="سيطرة/خضوع">سيطرة/خضوع</option>
-          <option value="عدائية/تنافسية">عدائية/تنافسية</option>
-          <option value="other">أخرى...</option>
-        </select>
-        <input id="f_relationship_other" style="display:none" placeholder="اكتب نوع العلاقة" />
-      </label>
-
-      <label>المظهر<textarea id="f_appearance" required placeholder="وصف المظهر بالتفصيل"></textarea></label>
-      <label>الشخصية<textarea id="f_personality" required placeholder="الطابع، طريقة الكلام، الصفات"></textarea></label>
-      <label>السياق/القصة (اختياري)<textarea id="f_scenario"></textarea></label>
-      <div class="modal-actions">
-        <button type="button" id="cancelCharBtn2">إلغاء</button>
-        <button type="submit" class="primary" id="charFormSubmitBtn">إنشاء</button>
+      <!-- الخطوة ٢: الدور -->
+      <div id="step-role" class="wizard-step" style="display:none">
+        <h3>دور الشخصية</h3>
+        <button type="button" class="back-to-step0" data-back="step0">› رجوع</button>
+        <div class="tab-row" id="roleTabs" data-field="role" data-options='["حبيب/حبيبة","صديق/صديقة","زوج/زوجة","معلم/معلمة","خادم/خادمة","سيد/سيدة","منافس/منافسة","غريب/غريبة"]'></div>
+        <input id="f_role_other" class="other-input" style="display:none" placeholder="اكتب الدور" />
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel">إلغاء</button>
+          <button type="button" class="primary step-next" data-next="step-voice">التالي ‹</button>
+        </div>
       </div>
-      </div><!-- /step1 -->
+
+      <!-- الخطوة ٣: الصوت -->
+      <div id="step-voice" class="wizard-step" style="display:none">
+        <h3>نمط الصوت</h3>
+        <button type="button" class="back-to-step0" data-back="step-role">› رجوع</button>
+        <div class="tab-row" id="voiceTabs" data-field="voice" data-options='["ناعم وهادئ","أنثوي رقيق","رجولي عميق","طفولي عالي النبرة","حيوي ومتحمس","بارد وجاد","مثير وغامض"]'></div>
+        <input id="f_voice_other" class="other-input" style="display:none" placeholder="اكتب نمط الصوت" />
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel">إلغاء</button>
+          <button type="button" class="primary step-next" data-next="step-relationship">التالي ‹</button>
+        </div>
+      </div>
+
+      <!-- الخطوة ٤: نوع العلاقة — كروت بأيقونات -->
+      <div id="step-relationship" class="wizard-step" style="display:none">
+        <h3>نوع العلاقة</h3>
+        <button type="button" class="back-to-step0" data-back="step-voice">› رجوع</button>
+        <div class="icon-cards" id="relationshipCards" data-field="relationship">
+          <button type="button" class="icon-card" data-value="رومانسية">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.3-8.8C1.3 8 2.8 5 6 5c1.9 0 3.3 1 4 2.3C10.7 6 12.1 5 14 5c3.2 0 4.7 3 3.3 6.2C15 15.6 12 20 12 20z"/></svg>
+            <span>رومانسية</span>
+          </button>
+          <button type="button" class="icon-card" data-value="صداقة">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 2.5-5 6-5s6 2 6 5M10 20c0-3 2.5-5 6-5s6 2 6 5"/></svg>
+            <span>صداقة</span>
+          </button>
+          <button type="button" class="icon-card" data-value="زواج">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="15" r="5"/><circle cx="16" cy="15" r="5"/></svg>
+            <span>زواج</span>
+          </button>
+          <button type="button" class="icon-card" data-value="عائلية">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg>
+            <span>عائلية</span>
+          </button>
+          <button type="button" class="icon-card" data-value="سيطرة/خضوع">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="7" r="3"/><path d="M8 10v4"/><circle cx="16" cy="17" r="3"/><path d="M16 14v-4"/><path d="M8 14h8"/></svg>
+            <span>سيطرة/خضوع</span>
+          </button>
+          <button type="button" class="icon-card" data-value="عدائية/تنافسية">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l7-7M20 4l-7 7M4 4l16 16"/></svg>
+            <span>عدائية/تنافسية</span>
+          </button>
+          <button type="button" class="icon-card" data-value="other">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 16h.01M12 8v5"/></svg>
+            <span>أخرى...</span>
+          </button>
+        </div>
+        <input id="f_relationship_other" class="other-input" style="display:none" placeholder="اكتب نوع العلاقة" />
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel">إلغاء</button>
+          <button type="button" class="primary step-next" data-next="step-attrs">التالي ‹</button>
+        </div>
+      </div>
+
+      <!-- الخطوة ٥: السمات الجسدية -->
+      <div id="step-attrs" class="wizard-step" style="display:none">
+        <h3>السمات الجسدية</h3>
+        <button type="button" class="back-to-step0" data-back="step-relationship">› رجوع</button>
+        <fieldset class="attrs-fieldset" style="border:none; padding:0;">
+          <label>لون الشعر
+            <div class="swatch-group" data-field="hairColor" data-colors='[
+              ["أسود","#1a1a1a"],["بني","#6b4423"],["أشقر","#d4af37"],["أحمر","#b22222"],
+              ["وردي","#ff9ecb"],["أبيض","#f5f5f5"],["أزرق","#3b6ea5"],["بنفسجي","#8e44ad"]
+            ]'></div>
+          </label>
+
+          <label>قصة الشعر
+            <div class="pill-group" data-field="hairstyle" data-options='["طويل","قصير","مموج","مجعد","ذيل حصان","ضفائر","منكوش"]'></div>
+          </label>
+
+          <label>لون العين
+            <div class="swatch-group" data-field="eyeColor" data-colors='[
+              ["بني","#6b4423"],["عسلي","#c68e3f"],["أزرق","#3b6ea5"],["أخضر","#4a7c59"],
+              ["رمادي","#8a8a99"],["بنفسجي","#8e44ad"],["أحمر","#b22222"],["ذهبي","#d4af37"]
+            ]'></div>
+          </label>
+
+          <label>حجم الصدر
+            <div class="pill-group size-group" data-field="breastSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
+          </label>
+
+          <label>حجم الطيز
+            <div class="pill-group size-group" data-field="buttSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
+          </label>
+
+          <label id="penisSizeLabel">حجم القضيب
+            <div class="pill-group size-group" data-field="penisSize" data-options='["صغير","متوسط","كبير","ضخم"]'></div>
+          </label>
+        </fieldset>
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel">إلغاء</button>
+          <button type="button" class="primary step-next" data-next="step-details">التالي ‹</button>
+        </div>
+      </div>
+
+      <!-- الخطوة ٦: الاسم + الوصف النهائي -->
+      <div id="step-details" class="wizard-step" style="display:none">
+        <h3 id="charFormTitle">التفاصيل النهائية</h3>
+        <button type="button" class="back-to-step0" data-back="step-attrs">› رجوع</button>
+        <label>الاسم<input id="f_name" required /></label>
+        <label>المظهر<textarea id="f_appearance" required placeholder="وصف المظهر بالتفصيل"></textarea></label>
+        <label>الشخصية<textarea id="f_personality" required placeholder="الطابع، طريقة الكلام، الصفات"></textarea></label>
+        <label>السياق/القصة (اختياري)<textarea id="f_scenario"></textarea></label>
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel">إلغاء</button>
+          <button type="submit" class="primary" id="charFormSubmitBtn">إنشاء</button>
+        </div>
+      </div>
     </form>
   </div>
 

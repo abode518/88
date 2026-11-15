@@ -226,3 +226,18 @@ button.danger { color: #ff6b6b; }
 .style-card span { font-size: 13px; font-weight: 600; }
 
 .back-to-step0 { align-self: flex-start; background: none; border: none; color: var(--accent); font-size: 13px; padding: 0; margin-top: -6px; }
+
+/* صف تابات عام (الدور، الصوت) — يلف بدل ما يتمرر أفقي لأن خياراته أكثر */
+.tab-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab-row .gtab { flex-shrink: 1; }
+
+.other-input { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: #1e1e28; color: var(--text); }
+
+/* كروت نوع العلاقة بأيقونات */
+.icon-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.icon-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 6px; border-radius: 12px; border: 2px solid var(--border); background: #1a1a24; color: var(--muted);
+}
+.icon-card span { font-size: 11px; text-align: center; }
+.icon-card.active { border-color: var(--accent); background: #22182a; color: var(--text); }

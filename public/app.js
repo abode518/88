@@ -142,22 +142,26 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach((btn) => {
   };
 });
 
-// ---- نموذج إنشاء/تعديل شخصية ----
+// ---- نموذج إنشاء/تعديل شخصية: معالج خطوات (wizard) ----
 const modalOverlay = document.getElementById('modalOverlay');
 let editingCharacterId = null; // null = إنشاء جديد، غير ذلك = تعديل
 let selectedGender = 'female';
 let selectedKind = 'realistic';
 
+const WIZARD_STEPS = ['step0', 'step-role', 'step-voice', 'step-relationship', 'step-attrs', 'step-details'];
+
 function closeCharModal() {
   modalOverlay.style.display = 'none';
 }
-document.getElementById('cancelCharBtn').onclick = closeCharModal;
-document.getElementById('cancelCharBtn2').onclick = closeCharModal;
+document.querySelectorAll('.modal-cancel').forEach((b) => (b.onclick = closeCharModal));
 
-function showStep(n) {
-  document.getElementById('step0').style.display = n === 0 ? 'flex' : 'none';
-  document.getElementById('step1').style.display = n === 1 ? 'flex' : 'none';
+function showStep(stepId) {
+  WIZARD_STEPS.forEach((id) => {
+    document.getElementById(id).style.display = id === stepId ? 'flex' : 'none';
+  });
 }
+document.querySelectorAll('.step-next').forEach((b) => (b.onclick = () => showStep(b.dataset.next)));
+document.querySelectorAll('.back-to-step0').forEach((b) => (b.onclick = () => showStep(b.dataset.back)));
 
 // ---- تابات الجنس + كروت النمط (خطوة ٠) ----
 document.getElementById('genderToggle').addEventListener('click', (e) => {
@@ -173,25 +177,90 @@ document.getElementById('kindCards').addEventListener('click', (e) => {
   selectedKind = btn.dataset.value;
   document.querySelectorAll('.style-card').forEach((b) => b.classList.toggle('active', b === btn));
 });
-document.getElementById('step0NextBtn').onclick = () => showStep(1);
-document.getElementById('step1BackBtn').onclick = () => showStep(0);
+document.getElementById('step0NextBtn').onclick = () => showStep('step-role');
 
-// حقول select فيها خيار "أخرى..." تكشف input نصي بجانبها
-function wireOtherSelect(selectId, otherId) {
-  const sel = document.getElementById(selectId);
-  const other = document.getElementById(otherId);
-  sel.onchange = () => {
-    other.style.display = sel.value === 'other' ? 'block' : 'none';
-  };
+// ---- صفوف تابات نصية عامة (الدور، الصوت) + خيار "أخرى" ----
+function renderTabRow(groupId) {
+  const group = document.getElementById(groupId);
+  const options = JSON.parse(group.dataset.options);
+  group.innerHTML =
+    options.map((o) => `<button type="button" class="gtab" data-value="${o}">${o}</button>`).join('') +
+    `<button type="button" class="gtab" data-value="other">أخرى...</button>`;
 }
-wireOtherSelect('f_role', 'f_role_other');
-wireOtherSelect('f_voice', 'f_voice_other');
-wireOtherSelect('f_relationship', 'f_relationship_other');
+function wireTabRowOther(groupId, otherInputId) {
+  const group = document.getElementById(groupId);
+  const other = document.getElementById(otherInputId);
+  group.addEventListener('click', (e) => {
+    const btn = e.target.closest('.gtab');
+    if (!btn) return;
+    group.querySelectorAll('.gtab').forEach((b) => b.classList.toggle('active', b === btn));
+    other.style.display = btn.dataset.value === 'other' ? 'block' : 'none';
+  });
+}
+renderTabRow('roleTabs');
+renderTabRow('voiceTabs');
+wireTabRowOther('roleTabs', 'f_role_other');
+wireTabRowOther('voiceTabs', 'f_voice_other');
 
-function selectValue(selectId, otherId) {
-  const sel = document.getElementById(selectId);
-  if (sel.value === 'other') return document.getElementById(otherId).value.trim();
-  return sel.value;
+function getTabRowValue(groupId, otherInputId) {
+  const group = document.getElementById(groupId);
+  const active = group.querySelector('.gtab.active');
+  if (!active) return '';
+  if (active.dataset.value === 'other') return document.getElementById(otherInputId).value.trim();
+  return active.dataset.value;
+}
+function setTabRowValue(groupId, otherInputId, value) {
+  const group = document.getElementById(groupId);
+  const other = document.getElementById(otherInputId);
+  const options = Array.from(group.querySelectorAll('.gtab'));
+  const match = options.find((o) => o.dataset.value === value);
+  options.forEach((b) => b.classList.remove('active'));
+  if (match) {
+    match.classList.add('active');
+    other.style.display = 'none';
+    other.value = '';
+  } else if (value) {
+    const otherBtn = options.find((o) => o.dataset.value === 'other');
+    if (otherBtn) otherBtn.classList.add('active');
+    other.style.display = 'block';
+    other.value = value;
+  } else {
+    other.style.display = 'none';
+    other.value = '';
+  }
+}
+
+// ---- كروت نوع العلاقة بأيقونات + خيار "أخرى" ----
+document.getElementById('relationshipCards').addEventListener('click', (e) => {
+  const btn = e.target.closest('.icon-card');
+  if (!btn) return;
+  document.querySelectorAll('.icon-card').forEach((b) => b.classList.toggle('active', b === btn));
+  document.getElementById('f_relationship_other').style.display = btn.dataset.value === 'other' ? 'block' : 'none';
+});
+function getRelationshipValue() {
+  const active = document.querySelector('.icon-card.active');
+  if (!active) return '';
+  if (active.dataset.value === 'other') return document.getElementById('f_relationship_other').value.trim();
+  return active.dataset.value;
+}
+function setRelationshipValue(value) {
+  const cards = Array.from(document.querySelectorAll('.icon-card'));
+  const other = document.getElementById('f_relationship_other');
+  const match = cards.find((c) => c.dataset.value === value);
+  cards.forEach((c) => c.classList.remove('active'));
+  if (match) {
+    match.classList.add('active');
+    other.style.display = 'none';
+    other.value = '';
+  } else if (value) {
+    const otherBtn = cards.find((c) => c.dataset.value === 'other');
+    if (otherBtn) otherBtn.classList.add('active');
+    other.style.display = 'block';
+    other.value = value;
+  } else {
+    other.style.display = 'none';
+    other.value = '';
+  }
 }
 
 // ---- عناصر اختيار السمات الجسدية (دوائر ألوان / كبسولات) ----
@@ -239,24 +308,11 @@ function updatePenisFieldVisibility() {
   document.getElementById('penisSizeLabel').style.display = HAS_PENIS_GENDERS.includes(selectedGender) ? 'flex' : 'none';
 }
 
-function setSelectWithOther(selectId, otherId, value) {
-  const sel = document.getElementById(selectId);
-  const other = document.getElementById(otherId);
-  const hasOption = Array.from(sel.options).some((o) => o.value === value);
-  if (value && !hasOption) {
-    sel.value = 'other';
-    other.value = value;
-    other.style.display = 'block';
-  } else {
-    sel.value = value || sel.options[0].value;
-    other.style.display = 'none';
-    other.value = '';
-  }
-}
-
 function setGenderTab(value) {
   selectedGender = value;
-  document.querySelectorAll('.gtab').forEach((b) => b.classList.toggle('active', b.dataset.value === value));
+  document.querySelectorAll('.gtab').forEach((b) => {
+    if (b.closest('#genderToggle')) b.classList.toggle('active', b.dataset.value === value);
+  });
 }
 function setKindCard(value) {
   selectedKind = value;
@@ -265,19 +321,19 @@ function setKindCard(value) {
 
 function openCharForm(character) {
   editingCharacterId = character ? character.id : null;
-  document.getElementById('charFormTitle').textContent = character ? `تعديل ${character.name}` : 'شخصية جديدة';
+  document.getElementById('charFormTitle').textContent = character ? `تعديل ${character.name}` : 'التفاصيل النهائية';
   document.getElementById('charFormSubmitBtn').textContent = character ? 'حفظ التعديلات' : 'إنشاء';
   document.getElementById('charForm').reset();
   clearAllChoices();
 
   setGenderTab(character ? character.gender : 'female');
   setKindCard(character ? character.kind : 'realistic');
+  setTabRowValue('roleTabs', 'f_role_other', character ? character.role : '');
+  setTabRowValue('voiceTabs', 'f_voice_other', character ? character.voice : '');
+  setRelationshipValue(character ? character.relationship_type : '');
 
   if (character) {
     document.getElementById('f_name').value = character.name;
-    setSelectWithOther('f_role', 'f_role_other', character.role);
-    setSelectWithOther('f_voice', 'f_voice_other', character.voice);
-    setSelectWithOther('f_relationship', 'f_relationship_other', character.relationship_type);
     document.getElementById('f_appearance').value = character.appearance;
     document.getElementById('f_personality').value = character.personality;
     document.getElementById('f_scenario').value = character.scenario || '';
@@ -289,7 +345,7 @@ function openCharForm(character) {
     setChoiceValue('penisSize', character.penis_size);
   }
   updatePenisFieldVisibility();
-  showStep(character ? 1 : 0); // تعديل يدخل مباشرة للتفاصيل، إنشاء يبدأ من اختيار الجنس/النمط
+  showStep(character ? 'step-details' : 'step0'); // تعديل يدخل مباشرة للتفاصيل، إنشاء يبدأ من اختيار الجنس/النمط
   modalOverlay.style.display = 'flex';
 }
 
@@ -302,9 +358,9 @@ document.getElementById('charForm').onsubmit = async (e) => {
     name: document.getElementById('f_name').value.trim(),
     kind: selectedKind,
     gender: selectedGender,
-    role: selectValue('f_role', 'f_role_other'),
-    voice: selectValue('f_voice', 'f_voice_other'),
-    relationshipType: selectValue('f_relationship', 'f_relationship_other'),
+    role: getTabRowValue('roleTabs', 'f_role_other'),
+    voice: getTabRowValue('voiceTabs', 'f_voice_other'),
+    relationshipType: getRelationshipValue(),
     hairColor: getChoiceValue('hairColor'),
     hairstyle: getChoiceValue('hairstyle'),
     eyeColor: getChoiceValue('eyeColor'),
