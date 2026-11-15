@@ -1,14 +1,16 @@
-// db.js — sqlite storage, Node/Express, better-sqlite3
+// db.js — sqlite storage, Node/Express
+// يستخدم node:sqlite المدمج بـ Node نفسه (Node 22+) بدل better-sqlite3 —
+// صفر اعتماد على تجميع كود C++ وقت التثبيت (كان يفشل على ويندوز بدون Visual Studio)
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+const { DatabaseSync } = require('node:sqlite');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const MEDIA_DIR = path.join(DATA_DIR, 'media');
 fs.mkdirSync(MEDIA_DIR, { recursive: true });
 
-const db = new Database(path.join(DATA_DIR, 'app.db'));
-db.pragma('journal_mode = WAL');
+const db = new DatabaseSync(path.join(DATA_DIR, 'app.db'));
+db.exec('PRAGMA journal_mode = WAL;');
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS characters (
