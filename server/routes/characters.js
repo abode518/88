@@ -16,19 +16,39 @@ router.get('/:id', (req, res) => {
   res.json(row);
 });
 
+const GENDERS = ['male', 'female', 'femboy', 'tomboy'];
+
 router.post('/', (req, res) => {
-  const { name, kind, appearance, personality, scenario, unrestricted } = req.body || {};
-  if (!name || !kind || !appearance || !personality) {
-    return res.status(400).json({ error: 'الحقول المطلوبة: name, kind, appearance, personality' });
+  const { name, kind, gender, role, voice, relationshipType, appearance, personality, scenario, unrestricted } =
+    req.body || {};
+  if (!name || !kind || !gender || !appearance || !personality) {
+    return res.status(400).json({ error: 'الحقول المطلوبة: name, kind, gender, appearance, personality' });
   }
   if (!['anime', 'realistic'].includes(kind)) {
     return res.status(400).json({ error: "kind يجب أن يكون 'anime' أو 'realistic'" });
   }
+  if (!GENDERS.includes(gender)) {
+    return res.status(400).json({ error: `gender يجب أن يكون واحد من: ${GENDERS.join(', ')}` });
+  }
   const id = nanoid();
   db.prepare(
-    `INSERT INTO characters (id, name, kind, appearance, personality, scenario, unrestricted, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(id, name, kind, appearance, personality, scenario || '', unrestricted === false ? 0 : 1, new Date().toISOString());
+    `INSERT INTO characters
+       (id, name, kind, gender, role, voice, relationship_type, appearance, personality, scenario, unrestricted, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    id,
+    name,
+    kind,
+    gender,
+    role || '',
+    voice || '',
+    relationshipType || '',
+    appearance,
+    personality,
+    scenario || '',
+    unrestricted === false ? 0 : 1,
+    new Date().toISOString()
+  );
 
   res.status(201).json(db.prepare('SELECT * FROM characters WHERE id = ?').get(id));
 });

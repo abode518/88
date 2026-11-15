@@ -2,9 +2,20 @@
 const fetch = require('node-fetch');
 const cfg = require('../config');
 
+const GENDER_LABELS = {
+  male: 'ذكر',
+  female: 'أنثى',
+  femboy: 'فيمبوي (مظهر وطاقة أنثوية في جسد ذكوري)',
+  tomboy: 'تومبوي (مظهر وطاقة ذكورية في جسد أنثوي)',
+};
+
 function buildSystemPrompt(character) {
   const base = [
     `أنت تجسّد شخصية اسمها "${character.name}".`,
+    `النوع: ${GENDER_LABELS[character.gender] || character.gender}`,
+    character.role ? `الدور: ${character.role}` : '',
+    character.relationship_type ? `نوع العلاقة مع المستخدم: ${character.relationship_type}` : '',
+    character.voice ? `نمط الصوت: ${character.voice} — اجعل أسلوب الكلام الكتابي يعكس هذا الصوت (نغمة، إيقاع، تعبيرات).` : '',
     `المظهر: ${character.appearance}`,
     `الشخصية والطابع: ${character.personality}`,
     character.scenario ? `السياق/القصة: ${character.scenario}` : '',

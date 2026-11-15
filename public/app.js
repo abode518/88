@@ -28,7 +28,9 @@ async function loadCharacters() {
   chars.forEach((c) => {
     const el = document.createElement('div');
     el.className = 'char-item' + (currentChar && currentChar.id === c.id ? ' active' : '');
-    el.innerHTML = `<span>${escapeHtml(c.name)}</span><span class="kind">${c.kind === 'anime' ? 'أنمي' : 'حقيقية'}</span>`;
+    const genderLabels = { male: 'ولد', female: 'بنت', femboy: 'فيمبوي', tomboy: 'تومبوي' };
+    const kindLabel = c.kind === 'anime' ? 'أنمي' : 'حقيقية';
+    el.innerHTML = `<span>${escapeHtml(c.name)}</span><span class="kind">${kindLabel} · ${genderLabels[c.gender] || ''}</span>`;
     el.onclick = () => selectCharacter(c);
     list.appendChild(el);
   });
@@ -129,11 +131,33 @@ const modalOverlay = document.getElementById('modalOverlay');
 document.getElementById('newCharBtn').onclick = () => (modalOverlay.style.display = 'flex');
 document.getElementById('cancelCharBtn').onclick = () => (modalOverlay.style.display = 'none');
 
+// حقول select فيها خيار "أخرى..." تكشف input نصي بجانبها
+function wireOtherSelect(selectId, otherId) {
+  const sel = document.getElementById(selectId);
+  const other = document.getElementById(otherId);
+  sel.onchange = () => {
+    other.style.display = sel.value === 'other' ? 'block' : 'none';
+  };
+}
+wireOtherSelect('f_role', 'f_role_other');
+wireOtherSelect('f_voice', 'f_voice_other');
+wireOtherSelect('f_relationship', 'f_relationship_other');
+
+function selectValue(selectId, otherId) {
+  const sel = document.getElementById(selectId);
+  if (sel.value === 'other') return document.getElementById(otherId).value.trim();
+  return sel.value;
+}
+
 document.getElementById('charForm').onsubmit = async (e) => {
   e.preventDefault();
   const payload = {
     name: document.getElementById('f_name').value.trim(),
     kind: document.getElementById('f_kind').value,
+    gender: document.getElementById('f_gender').value,
+    role: selectValue('f_role', 'f_role_other'),
+    voice: selectValue('f_voice', 'f_voice_other'),
+    relationshipType: selectValue('f_relationship', 'f_relationship_other'),
     appearance: document.getElementById('f_appearance').value.trim(),
     personality: document.getElementById('f_personality').value.trim(),
     scenario: document.getElementById('f_scenario').value.trim(),

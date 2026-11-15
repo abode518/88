@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS characters (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   kind TEXT NOT NULL,              -- 'anime' | 'realistic'
+  gender TEXT DEFAULT 'female',    -- 'male' | 'female' | 'femboy' | 'tomboy'
+  role TEXT DEFAULT '',            -- دور الشخصية: حبيب/صديق/معلم/...
+  voice TEXT DEFAULT '',           -- وصف نمط الصوت
+  relationship_type TEXT DEFAULT '', -- نوع العلاقة مع المستخدم
   appearance TEXT NOT NULL,        -- وصف المظهر (يُحقن في برومبت الصور)
   personality TEXT NOT NULL,       -- وصف الشخصية (يُحقن في system prompt الشات)
   scenario TEXT DEFAULT '',        -- سياق/عالم القصة
@@ -44,5 +48,15 @@ CREATE TABLE IF NOT EXISTS media (
   created_at TEXT NOT NULL
 );
 `);
+
+// ترحيل آمن لقواعد بيانات قديمة أُنشئت قبل إضافة هذه الحقول
+const existingCols = db.prepare(`PRAGMA table_info(characters)`).all().map((c) => c.name);
+const addColIfMissing = (name, decl) => {
+  if (!existingCols.includes(name)) db.exec(`ALTER TABLE characters ADD COLUMN ${name} ${decl}`);
+};
+addColIfMissing('gender', `TEXT DEFAULT 'female'`);
+addColIfMissing('role', `TEXT DEFAULT ''`);
+addColIfMissing('voice', `TEXT DEFAULT ''`);
+addColIfMissing('relationship_type', `TEXT DEFAULT ''`);
 
 module.exports = { db, MEDIA_DIR, DATA_DIR };

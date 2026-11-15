@@ -66,12 +66,65 @@
     <form id="charForm" class="modal">
       <h3>شخصية جديدة</h3>
       <label>الاسم<input id="f_name" required /></label>
-      <label>النوع
+
+      <label>النمط
         <select id="f_kind">
           <option value="anime">أنمي</option>
           <option value="realistic">حقيقية</option>
         </select>
       </label>
+
+      <label>الجنس
+        <select id="f_gender">
+          <option value="male">ولد</option>
+          <option value="female">بنت</option>
+          <option value="femboy">فيمبوي (ولد بمظهر أنثوي)</option>
+          <option value="tomboy">تومبوي (بنت بمظهر ذكوري)</option>
+        </select>
+      </label>
+
+      <label>الدور
+        <select id="f_role">
+          <option value="حبيب/حبيبة">حبيب/حبيبة</option>
+          <option value="صديق/صديقة">صديق/صديقة</option>
+          <option value="زوج/زوجة">زوج/زوجة</option>
+          <option value="معلم/معلمة">معلم/معلمة</option>
+          <option value="خادم/خادمة">خادم/خادمة</option>
+          <option value="سيد/سيدة">سيد/سيدة</option>
+          <option value="منافس/منافسة">منافس/منافسة</option>
+          <option value="غريب/غريبة">غريب/غريبة</option>
+          <option value="other">أخرى...</option>
+        </select>
+        <input id="f_role_other" style="display:none" placeholder="اكتب الدور" />
+      </label>
+
+      <label>الصوت
+        <select id="f_voice">
+          <option value="ناعم وهادئ">ناعم وهادئ</option>
+          <option value="أنثوي رقيق">أنثوي رقيق</option>
+          <option value="رجولي عميق">رجولي عميق</option>
+          <option value="طفولي عالي النبرة">طفولي عالي النبرة</option>
+          <option value="حيوي ومتحمس">حيوي ومتحمس</option>
+          <option value="بارد وجاد">بارد وجاد</option>
+          <option value="مثير وغامض">مثير وغامض</option>
+          <option value="other">أخرى...</option>
+        </select>
+        <input id="f_voice_other" style="display:none" placeholder="اكتب نمط الصوت" />
+      </label>
+
+      <label>نوع العلاقة
+        <select id="f_relationship">
+          <option value="رومانسية">رومانسية</option>
+          <option value="صداقة">صداقة</option>
+          <option value="زواج">زواج</option>
+          <option value="عائلية">عائلية</option>
+          <option value="سيطرة/خضوع">سيطرة/خضوع</option>
+          <option value="عدائية/تنافسية">عدائية/تنافسية</option>
+          <option value="other">أخرى...</option>
+        </select>
+        <input id="f_relationship_other" style="display:none" placeholder="اكتب نوع العلاقة" />
+      </label>
+
       <label>المظهر<textarea id="f_appearance" required placeholder="وصف المظهر بالتفصيل"></textarea></label>
       <label>الشخصية<textarea id="f_personality" required placeholder="الطابع، طريقة الكلام، الصفات"></textarea></label>
       <label>السياق/القصة (اختياري)<textarea id="f_scenario"></textarea></label>
