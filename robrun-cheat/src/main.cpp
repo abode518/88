@@ -27,6 +27,7 @@
 #include "encrypt.h"
 #include "math.h"
 #include "offsets.h"
+#include "scanner.h"
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
@@ -42,7 +43,9 @@ static ConfigMgr g_cfgMgr;
 static FullConfig g_cfg;
 
 static std::atomic<bool> g_running = true;
-static bool g_menuOpen = false;
+static bool  g_menuOpen    = false;
+static bool  g_offsetsOk   = false;
+static char  g_statusMsg[128] = "waiting for game...";
 
 // ── obfuscated sleep — randomize timing to defeat rhythm-based detection ──────
 static void rsleep(int baseMs) {
@@ -171,6 +174,10 @@ static void drawMenu() {
     ImGui::SameLine(0, 20);
     ImGui::TextColored({0.4f,0.4f,0.4f,1.f},
         "players:%d  INSERT=hide  END=exit", (int)g_esp.players.size());
+    if (!g_offsetsOk)
+        ImGui::TextColored({1.f,0.4f,0.2f,1.f}, "⚠ offsets not resolved — patterns need update after patch");
+    else
+        ImGui::TextColored({0.3f,0.9f,0.3f,1.f}, "● %s", g_statusMsg);
     ImGui::Separator();
 
     if (ImGui::BeginTabBar("tabs")) {
@@ -270,9 +277,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // load saved config
     g_cfgMgr.load(g_cfg);
 
-    // wait for game — encrypted proc name
+    // wait for game
     const std::wstring procName = L"RobRun.exe"; // FILL: verify exact process name
+    snprintf(g_statusMsg, sizeof(g_statusMsg), "waiting for RobRun.exe...");
     while (!g_mem.attach(procName.c_str())) rsleep(2000);
+
+    // auto-resolve offsets via pattern scanning — survives patches
+    snprintf(g_statusMsg, sizeof(g_statusMsg), "scanning offsets...");
+    OffsetResolver::resolve(g_mem);
+    g_offsetsOk = true;
+    snprintf(g_statusMsg, sizeof(g_statusMsg), "ready");
 
     // init overlay — exact window title
     // FILL: verify window title with Spy++ or Process Hacker
