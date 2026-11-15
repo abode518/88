@@ -2,6 +2,7 @@
 const express = require('express');
 const { nanoid } = require('nanoid');
 const { db } = require('../db');
+const imageEngine = require('../engines/image');
 
 const router = express.Router();
 
@@ -51,6 +52,33 @@ router.post('/', (req, res) => {
   );
 
   res.status(201).json(db.prepare('SELECT * FROM characters WHERE id = ?').get(id));
+});
+
+// توليد/إعادة توليد صورة الشخصية — prompt اختياري: فاضي = تلقائي بناءً على اختيارات الشخصية
+router.post('/:id/avatar', async (req, res) => {
+  const character = db.prepare('SELECT * FROM characters WHERE id = ?').get(req.params.id);
+  if (!character) return res.status(404).json({ error: 'الشخصية غير موجودة' });
+
+  const { prompt, negativePrompt } = req.body || {};
+  try {
+    const fileName = await imageEngine.generateImage({
+      character,
+      prompt: prompt || '',
+      negativePrompt,
+      width: 512,
+      height: 512,
+    });
+    db.prepare('UPDATE characters SET avatar_path = ? WHERE id = ?').run(fileName, character.id);
+    // نسجّلها في سجل الوسائط أيضاً حتى تظهر مع باقي الصور
+    db.prepare(
+      `INSERT INTO media (id, character_id, type, prompt, status, file_path, created_at)
+       VALUES (?, ?, 'image', ?, 'done', ?, ?)`
+    ).run(nanoid(), character.id, prompt || '(تلقائي)', fileName, new Date().toISOString());
+
+    res.status(201).json(db.prepare('SELECT * FROM characters WHERE id = ?').get(character.id));
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
 });
 
 router.delete('/:id', (req, res) => {

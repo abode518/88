@@ -30,7 +30,10 @@ async function loadCharacters() {
     el.className = 'char-item' + (currentChar && currentChar.id === c.id ? ' active' : '');
     const genderLabels = { male: 'ولد', female: 'بنت', femboy: 'فيمبوي', tomboy: 'تومبوي' };
     const kindLabel = c.kind === 'anime' ? 'أنمي' : 'حقيقية';
-    el.innerHTML = `<span>${escapeHtml(c.name)}</span><span class="kind">${kindLabel} · ${genderLabels[c.gender] || ''}</span>`;
+    const avatarImg = c.avatar_path
+      ? `<img class="avatar-xs" src="/media/${c.avatar_path}" alt="" />`
+      : `<div class="avatar-xs"></div>`;
+    el.innerHTML = `${avatarImg}<span class="char-item-text"><span>${escapeHtml(c.name)}</span><span class="kind">${kindLabel} · ${genderLabels[c.gender] || ''}</span></span>`;
     el.onclick = () => selectCharacter(c);
     list.appendChild(el);
   });
@@ -45,6 +48,13 @@ async function selectCharacter(c) {
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('charView').style.display = 'flex';
   document.getElementById('charName').textContent = c.name;
+  const avatarEl = document.getElementById('charAvatar');
+  if (c.avatar_path) {
+    avatarEl.src = `/media/${c.avatar_path}`;
+    avatarEl.style.display = 'block';
+  } else {
+    avatarEl.style.display = 'none';
+  }
   await loadCharacters();
   await loadMessages();
   await loadMedia();
@@ -168,10 +178,54 @@ document.getElementById('charForm').onsubmit = async (e) => {
     e.target.reset();
     await loadCharacters();
     await selectCharacter(c);
+    openAvatarModal();
   } catch (err) {
     alert(err.message);
   }
 };
+
+// ---- صورة الشخصية (بعد الإنشاء أو عند إعادة التوليد) ----
+const avatarModalOverlay = document.getElementById('avatarModalOverlay');
+
+function openAvatarModal() {
+  document.getElementById('avatarPrompt').value = '';
+  renderAvatarPreview();
+  avatarModalOverlay.style.display = 'flex';
+}
+
+function renderAvatarPreview() {
+  const box = document.getElementById('avatarPreview');
+  box.innerHTML = currentChar && currentChar.avatar_path
+    ? `<img src="/media/${currentChar.avatar_path}" alt="" />`
+    : '<span class="muted">لا توجد صورة بعد</span>';
+}
+
+async function generateAvatar(prompt) {
+  if (!currentChar) return;
+  const box = document.getElementById('avatarPreview');
+  box.innerHTML = '<span class="muted">جارٍ التوليد...</span>';
+  try {
+    const updated = await api(`/api/characters/${currentChar.id}/avatar`, {
+      method: 'POST',
+      body: JSON.stringify({ prompt: prompt || '' }),
+    });
+    currentChar = updated;
+    renderAvatarPreview();
+    const avatarEl = document.getElementById('charAvatar');
+    avatarEl.src = `/media/${updated.avatar_path}`;
+    avatarEl.style.display = 'block';
+    await loadCharacters();
+    await loadMedia();
+  } catch (err) {
+    box.innerHTML = `<span class="muted">فشل: ${escapeHtml(err.message)}</span>`;
+  }
+}
+
+document.getElementById('avatarAutoBtn').onclick = () => generateAvatar('');
+document.getElementById('avatarCustomBtn').onclick = () =>
+  generateAvatar(document.getElementById('avatarPrompt').value.trim());
+document.getElementById('avatarSkipBtn').onclick = () => (avatarModalOverlay.style.display = 'none');
+document.getElementById('regenAvatarBtn').onclick = () => openAvatarModal();
 
 document.getElementById('deleteCharBtn').onclick = async () => {
   if (!currentChar) return;

@@ -20,11 +20,15 @@
 
       <div id="charView" class="char-view" style="display:none">
         <header class="char-header">
-          <h2 id="charName"></h2>
+          <div class="char-title">
+            <img id="charAvatar" class="avatar-sm" src="" alt="" style="display:none" />
+            <h2 id="charName"></h2>
+          </div>
           <div class="tabs">
             <button class="tab-btn active" data-tab="chat">شات</button>
             <button class="tab-btn" data-tab="image">صور</button>
             <button class="tab-btn" data-tab="video">فيديو</button>
+            <button class="tab-btn" id="regenAvatarBtn">صورة الشخصية</button>
             <button class="tab-btn danger" id="deleteCharBtn">حذف الشخصية</button>
           </div>
         </header>
@@ -60,6 +64,20 @@
         </section>
       </div>
     </main>
+  </div>
+
+  <div id="avatarModalOverlay" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h3>صورة الشخصية</h3>
+      <p class="muted">تقدر تولّدها تلقائياً بناءً على اختياراتك، أو تكتب تفاصيل خاصة وتُنفَّذ كما هي.</p>
+      <div id="avatarPreview" class="avatar-preview"></div>
+      <textarea id="avatarPrompt" placeholder="تفاصيل خاصة للصورة (اختياري)..."></textarea>
+      <div class="modal-actions">
+        <button type="button" id="avatarSkipBtn">تخطي</button>
+        <button type="button" id="avatarAutoBtn">توليد تلقائي</button>
+        <button type="button" id="avatarCustomBtn" class="primary">توليد بالتفاصيل</button>
+      </div>
+    </div>
   </div>
 
   <div id="modalOverlay" class="modal-overlay" style="display:none">

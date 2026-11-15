@@ -52,8 +52,10 @@ button.danger { color: #ff6b6b; }
   background: #1e1e28;
   cursor: pointer;
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
+.char-item .char-item-text { flex: 1; display: flex; justify-content: space-between; min-width: 0; }
 .char-item:hover, .char-item.active { background: #2a2a3a; }
 .char-item .kind { font-size: 11px; color: var(--muted); }
 
@@ -65,6 +67,12 @@ button.danger { color: #ff6b6b; }
 .empty-state { margin: auto; color: var(--muted); }
 
 .char-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.char-title { display: flex; align-items: center; gap: 10px; }
+.avatar-sm { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
+.avatar-xs { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+.avatar-preview { display: flex; justify-content: center; }
+.avatar-preview img { width: 160px; height: 160px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border); }
+.muted { color: var(--muted); font-size: 12px; margin: 0; }
 .tabs { display: flex; gap: 6px; }
 .tab-btn.active { background: linear-gradient(90deg, var(--accent), var(--accent2)); border: none; }
 
