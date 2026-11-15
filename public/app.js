@@ -380,7 +380,7 @@ document.getElementById('charForm').onsubmit = async (e) => {
     clearAllChoices();
     await loadCharacters();
     await selectCharacter(c);
-    if (!editingCharacterId) openAvatarModal(); // بعد الإنشاء فقط
+    if (!editingCharacterId) openAvatarModal(true); // بعد الإنشاء فقط — يبدأ التوليد التلقائي فورًا
     editingCharacterId = null;
   } catch (err) {
     alert(err.message);
@@ -390,10 +390,11 @@ document.getElementById('charForm').onsubmit = async (e) => {
 // ---- صورة الشخصية (بعد الإنشاء أو عند إعادة التوليد) ----
 const avatarModalOverlay = document.getElementById('avatarModalOverlay');
 
-function openAvatarModal() {
+function openAvatarModal(autoStart) {
   document.getElementById('avatarPrompt').value = '';
   renderAvatarPreview();
   avatarModalOverlay.style.display = 'flex';
+  if (autoStart) generateAvatar(''); // أول صورة بعد الإنشاء تتولد فورًا بدون ما ينتظر المستخدم يضغط
 }
 
 function renderAvatarPreview() {

@@ -19,6 +19,16 @@ const GENDER_IMAGE_TAGS = {
 
 const HAS_PENIS = ['male', 'femboy', 'futa'];
 
+// تاغات العري/الأعضاء التناسلية حسب الجنس — تُستخدم بالبرومبت التلقائي لصورة الشخصية
+// (الطلبات اليدوية بـ /image تمر كما هي بدون أي حقن، هذا فقط للبرومبت الافتراضي وقت ما المستخدم يكتب شي)
+const GENDER_NUDE_TAGS = {
+  male: 'nude, fully visible exposed penis, explicit',
+  female: 'nude, fully visible exposed vulva and pussy, explicit',
+  femboy: 'nude, fully visible exposed penis, explicit',
+  tomboy: 'nude, fully visible exposed vulva and pussy, explicit',
+  futa: 'nude, fully visible exposed penis and vulva, futanari, explicit',
+};
+
 // جملة عربية توصف السمات الجسدية المختارة — تُستخدم بـ system prompt الشات
 function describeTraitsArabic(character) {
   const parts = [];
@@ -43,4 +53,11 @@ function describeTraitsImageTags(character) {
   return tags.join(', ');
 }
 
-module.exports = { GENDER_LABELS, GENDER_IMAGE_TAGS, HAS_PENIS, describeTraitsArabic, describeTraitsImageTags };
+module.exports = {
+  GENDER_LABELS,
+  GENDER_IMAGE_TAGS,
+  GENDER_NUDE_TAGS,
+  HAS_PENIS,
+  describeTraitsArabic,
+  describeTraitsImageTags,
+};

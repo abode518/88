@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const cfg = require('../config');
 const { MEDIA_DIR } = require('../db');
-const { GENDER_IMAGE_TAGS, describeTraitsImageTags } = require('../traits');
+const { GENDER_IMAGE_TAGS, GENDER_NUDE_TAGS, describeTraitsImageTags } = require('../traits');
 
 function stylePrefix(kind) {
   return kind === 'anime'
@@ -12,10 +12,12 @@ function stylePrefix(kind) {
     : 'photorealistic, high detail, realistic lighting, ';
 }
 
-// برومبت افتراضي للأفاتار يُبنى بالكامل من اختيارات الشخصية إذا المستخدم ما كتب تفاصيل خاصة
+// برومبت افتراضي للأفاتار يُبنى بالكامل من اختيارات الشخصية (الجنس + السمات) لما المستخدم ما يكتب شي بنفسه —
+// عاري وصريح يبيّن الأعضاء التناسلية حسب الجنس المختار، بدون أي تلطيف أو صيغة SFW افتراضية
 function autoAvatarPrompt(character) {
   const traits = describeTraitsImageTags(character);
-  return `${GENDER_IMAGE_TAGS[character.gender] || ''} portrait, looking at viewer, upper body, ${character.appearance}${traits ? ', ' + traits : ''}`;
+  const nudeTag = GENDER_NUDE_TAGS[character.gender] || 'nude, explicit';
+  return `${GENDER_IMAGE_TAGS[character.gender] || ''} ${nudeTag}, full body, looking at viewer, spread legs, ${character.appearance}${traits ? ', ' + traits : ''}`;
 }
 
 async function generateImage({ character, prompt, negativePrompt, width, height, steps }) {
