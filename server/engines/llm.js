@@ -60,4 +60,44 @@ async function chat(character, history, userMessage) {
   return reply;
 }
 
-module.exports = { chat, buildSystemPrompt };
+// "ساعدني أرد" — يقترح رسالة قصيرة بصيغة المستخدم (مو الشخصية) بناءً على سياق المحادثة
+async function suggestUserReply(character, history) {
+  if (!cfg.llm.baseUrl) throw new Error('LLM_BASE_URL غير مضبوط — اضبطه في .env');
+
+  const sys = [
+    `فيه محادثة بين المستخدم وشخصية اسمها "${character.name}" (${buildSystemPrompt(character).split('\n')[1] || ''}).`,
+    'مهمتك: اقترح رسالة قصيرة واحدة بصيغة المستخدم نفسه (ضمير المتكلم) كرد طبيعي على آخر رسالة من الشخصية.',
+    'اكتب الرسالة المقترحة فقط، بدون شرح أو علامات اقتباس أو أي إضافة.',
+  ].join('\n');
+
+  const messages = [
+    { role: 'system', content: sys },
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user', content: 'اقترح ردي التالي الآن.' },
+  ];
+
+  const res = await fetch(`${cfg.llm.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cfg.llm.apiKey ? { Authorization: `Bearer ${cfg.llm.apiKey}` } : {}),
+    },
+    body: JSON.stringify({
+      model: cfg.llm.model || undefined,
+      messages,
+      temperature: 1.0,
+      max_tokens: 120,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`فشل طلب الاقتراح (${res.status}): ${text.slice(0, 500)}`);
+  }
+  const data = await res.json();
+  const suggestion = data?.choices?.[0]?.message?.content;
+  if (!suggestion) throw new Error('رد غير متوقع من محرك الشات');
+  return suggestion.trim();
+}
+
+module.exports = { chat, buildSystemPrompt, suggestUserReply };

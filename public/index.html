@@ -36,8 +36,11 @@
         </header>
 
         <section id="tab-chat" class="tab-panel active">
+          <p class="disclaimer">كل كلام الشخصية من توليد الذكاء الاصطناعي — خيالي بالكامل.</p>
           <div id="chatLog" class="chat-log"></div>
+          <div id="quickActions" class="quick-actions"></div>
           <form id="chatForm" class="chat-form">
+            <button type="button" id="suggestReplyBtn" title="ساعدني أرد">💡</button>
             <input id="chatInput" type="text" placeholder="اكتب رسالتك..." autocomplete="off" />
             <button type="submit" class="primary">إرسال</button>
           </form>
@@ -188,6 +191,17 @@
         <button type="submit" class="primary" id="charFormSubmitBtn">إنشاء</button>
       </div>
     </form>
+  </div>
+
+  <div id="ageGateOverlay" class="modal-overlay" style="display:none">
+    <div class="modal age-gate">
+      <h3>تأكيد العمر</h3>
+      <p>هذا الموقع يحتوي محتوى للبالغين فقط (+18)، غير مناسب لمن هم أقل من ذلك.</p>
+      <div class="modal-actions">
+        <button type="button" id="ageGateLeaveBtn">عمري أقل من 18 — خروج</button>
+        <button type="button" id="ageGateConfirmBtn" class="primary">أؤكد أن عمري 18 فأكثر</button>
+      </div>
+    </div>
   </div>
 
   <script src="/app.js"></script>

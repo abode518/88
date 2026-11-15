@@ -51,6 +51,23 @@ router.post('/:characterId/messages', async (req, res) => {
   }
 });
 
+// "ساعدني أرد" — يرجّع اقتراح نص للمستخدم، ما يُحفظ بالمحادثة ولا يُرسل تلقائي
+router.post('/:characterId/suggest-reply', async (req, res) => {
+  const character = db.prepare('SELECT * FROM characters WHERE id = ?').get(req.params.characterId);
+  if (!character) return res.status(404).json({ error: 'الشخصية غير موجودة' });
+
+  const history = db
+    .prepare('SELECT role, content FROM messages WHERE character_id = ? ORDER BY created_at ASC LIMIT 40')
+    .all(character.id);
+
+  try {
+    const suggestion = await llm.suggestUserReply(character, history);
+    res.json({ suggestion });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 router.delete('/:characterId/messages', (req, res) => {
   db.prepare('DELETE FROM messages WHERE character_id = ?').run(req.params.characterId);
   res.json({ ok: true });

@@ -347,6 +347,57 @@ document.getElementById('deleteCharBtn').onclick = async () => {
   await loadCharacters();
 };
 
+// ---- أزرار إجراءات سريعة (تُدرج نص بالصندوق، ما ترسل تلقائي) ----
+const QUICK_ACTIONS = [
+  'يقبّلها', 'يعانقها', 'يمص', 'من الخلف', 'وضعية فوق', 'وضعية فوق مقلوبة',
+  'قذف', 'استمناء', 'بين الصدر', 'التبشيري', 'تقييد', 'إمناء باليد', 'سيلفي', 'وضعية تصوير',
+];
+function renderQuickActions() {
+  const box = document.getElementById('quickActions');
+  box.innerHTML = QUICK_ACTIONS.map((a) => `<button type="button" class="pill-btn" data-action="${escapeHtml(a)}">${escapeHtml(a)}</button>`).join('');
+  box.querySelectorAll('button').forEach((btn) => {
+    btn.onclick = () => {
+      const input = document.getElementById('chatInput');
+      const text = `*${btn.dataset.action}*`;
+      input.value = input.value ? `${input.value} ${text}` : text;
+      input.focus();
+    };
+  });
+}
+renderQuickActions();
+
+// ---- ساعدني أرد: يقترح رسالة للمستخدم بدون إرسالها ----
+document.getElementById('suggestReplyBtn').onclick = async () => {
+  if (!currentChar) return;
+  const btn = document.getElementById('suggestReplyBtn');
+  btn.disabled = true;
+  try {
+    const { suggestion } = await api(`/api/chat/${currentChar.id}/suggest-reply`, { method: 'POST', body: '{}' });
+    document.getElementById('chatInput').value = suggestion;
+    document.getElementById('chatInput').focus();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ---- بوابة العمر (مرة واحدة لكل متصفح) ----
+(function ageGate() {
+  let confirmed = false;
+  try { confirmed = localStorage.getItem('age_confirmed') === 'yes'; } catch (e) {}
+  if (confirmed) return;
+  const overlay = document.getElementById('ageGateOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('ageGateConfirmBtn').onclick = () => {
+    try { localStorage.setItem('age_confirmed', 'yes'); } catch (e) {}
+    overlay.style.display = 'none';
+  };
+  document.getElementById('ageGateLeaveBtn').onclick = () => {
+    window.location.href = 'about:blank';
+  };
+})();
+
 // ---- الشات ----
 document.getElementById('chatForm').onsubmit = async (e) => {
   e.preventDefault();
