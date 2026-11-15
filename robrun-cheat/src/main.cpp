@@ -118,10 +118,11 @@ static void drawESP(ImDrawList* dl) {
         }
 
         // ── snapline ─────────────────────────────────────────────────────────
-        Overlay::drawLine(dl,
-            {g_overlay.width * 0.5f, g_overlay.height},
-            p.scrFeet,
-            (col & 0x00FFFFFF) | 0x33000000, 0.7f);
+        if (g_esp.cfg.playerBoxes)
+            Overlay::drawLine(dl,
+                {g_overlay.width * 0.5f, g_overlay.height},
+                p.scrFeet,
+                (col & 0x00FFFFFF) | 0x33000000, 0.7f);
     }
 
     for (const auto& l : g_esp.loot) {
@@ -436,9 +437,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     // auto-resolve offsets via pattern scanning — survives patches
     snprintf(g_statusMsg, sizeof(g_statusMsg), "scanning offsets...");
-    OffsetResolver::resolve(g_mem);
-    g_offsetsOk = true;
-    snprintf(g_statusMsg, sizeof(g_statusMsg), "ready");
+    g_offsetsOk = OffsetResolver::resolve(g_mem);
+    snprintf(g_statusMsg, sizeof(g_statusMsg),
+             g_offsetsOk ? "ready" : "offsets missing — update patterns");
 
     // init overlay — exact window title
     // FILL: verify window title with Spy++ or Process Hacker
@@ -484,7 +485,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
         g_overlay.endFrame();
 
-        rsleep(1); // slight randomized sleep — smooths CPU + defeats timing analysis
+        rsleep(8); // jitter: 8±2ms — randomizes frame cadence, defeats timing analysis
     }
 
     // save on exit

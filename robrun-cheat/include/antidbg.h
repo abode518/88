@@ -15,13 +15,14 @@ inline bool isDebuggerPresent() {
     if (IsDebuggerPresent()) return true;
 
     // NtGlobalFlag — set to 0x70 when process created by debugger
-    PPEB peb = reinterpret_cast<PPEB>(__readgsqword(0x60));
-    if (peb->NtGlobalFlag & 0x70) return true;
+    // peb->NtGlobalFlag not in public SDK; read by offset (0xBC on x64)
+    uintptr_t peb = __readgsqword(0x60);
+    if (*reinterpret_cast<ULONG*>(peb + 0xBC) & 0x70) return true;
 
-    // heap flags
+    // heap flags — x64 offsets: Flags=0x70, ForceFlags=0x74 (NOT 0x40/0x44 which are x86)
     PVOID heap = GetProcessHeap();
-    DWORD flags    = *reinterpret_cast<DWORD*>(reinterpret_cast<uint8_t*>(heap) + 0x40);
-    DWORD forceFlags = *reinterpret_cast<DWORD*>(reinterpret_cast<uint8_t*>(heap) + 0x44);
+    DWORD flags      = *reinterpret_cast<DWORD*>(reinterpret_cast<uint8_t*>(heap) + 0x70);
+    DWORD forceFlags = *reinterpret_cast<DWORD*>(reinterpret_cast<uint8_t*>(heap) + 0x74);
     if (flags & 0x40 || forceFlags != 0) return true;
 
     // RDTSC timing — debugger single-step causes large delta
