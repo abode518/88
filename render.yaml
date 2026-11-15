@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: unbound-studio
+    env: node
+    plan: free
+    branch: claude/character-image-video-creation-8rooup
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: LLM_BASE_URL
+        value: ""
+      - key: LLM_API_KEY
+        value: ""
+      - key: LLM_MODEL
+        value: ""
+      - key: IMAGE_API_MODE
+        value: sdwebui
+      - key: IMAGE_BASE_URL
+        value: ""
+      - key: IMAGE_API_KEY
+        value: ""
+      - key: VIDEO_BASE_URL
+        value: ""
+      - key: VIDEO_API_KEY
+        value: ""
