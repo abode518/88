@@ -30,10 +30,8 @@ async function loadCharacters() {
     el.className = 'char-item' + (currentChar && currentChar.id === c.id ? ' active' : '');
     const genderLabels = { male: 'ولد', female: 'بنت', femboy: 'فيمبوي', tomboy: 'تومبوي', futa: 'فوتا' };
     const kindLabel = c.kind === 'anime' ? 'أنمي' : 'حقيقية';
-    const avatarImg = c.avatar_path
-      ? `<img class="avatar-xs" src="/media/${c.avatar_path}" alt="" />`
-      : `<div class="avatar-xs"></div>`;
-    el.innerHTML = `${avatarImg}<span class="char-item-text"><span>${escapeHtml(c.name)}</span><span class="kind">${kindLabel} · ${genderLabels[c.gender] || ''}</span></span>`;
+    if (c.avatar_path) el.style.backgroundImage = `url(/media/${c.avatar_path})`;
+    el.innerHTML = `<span class="char-item-text"><span>${escapeHtml(c.name)}</span><span class="kind">${kindLabel} · ${genderLabels[c.gender] || ''}</span></span>`;
     el.onclick = () => selectCharacter(c);
     list.appendChild(el);
   });
@@ -50,11 +48,14 @@ async function selectCharacter(c) {
   document.getElementById('charName').textContent = c.name;
   document.getElementById('app').classList.add('char-open'); // بالجوال: يخفي القائمة ويعرض المحادثة كاملة
   const avatarEl = document.getElementById('charAvatar');
+  const bgEl = document.getElementById('chatBackground');
   if (c.avatar_path) {
     avatarEl.src = `/media/${c.avatar_path}`;
     avatarEl.style.display = 'block';
+    bgEl.style.backgroundImage = `url(/media/${c.avatar_path})`;
   } else {
     avatarEl.style.display = 'none';
+    bgEl.style.backgroundImage = 'none';
   }
   await loadCharacters();
   await loadMessages();
@@ -323,6 +324,7 @@ async function generateAvatar(prompt) {
     const avatarEl = document.getElementById('charAvatar');
     avatarEl.src = `/media/${updated.avatar_path}`;
     avatarEl.style.display = 'block';
+    document.getElementById('chatBackground').style.backgroundImage = `url(/media/${updated.avatar_path})`;
     await loadCharacters();
     await loadMedia();
   } catch (err) {
